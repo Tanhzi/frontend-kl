@@ -1,0 +1,589 @@
+/* src/admin/Page/Manageqr/Manageqr.css */
+
+/* THANH CUỘN DỌC NGOÀI CÙNG - GIỐNG EVENT & PROMOTION */
+.manageqr-scroll-container {
+  height: calc(100vh - 70px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 10px;
+}
+
+.manageqr-scroll-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.manageqr-scroll-container::-webkit-scrollbar-track {
+  background: #f8e8ee;
+  border-radius: 10px;
+}
+
+.manageqr-scroll-container::-webkit-scrollbar-thumb {
+  background: #d81b60;
+  border-radius: 10px;
+}
+
+.manageqr-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #c2185b;
+}
+
+.manageqr-main-container {
+  margin-left: 280px;
+  margin-top: 70px;
+  padding: 30px;
+  min-height: calc(100vh - 70px);
+  transition: margin-left 0.3s ease;
+  background: #fdf6f8;
+  font-family: 'Poppins', sans-serif;
+}
+
+.manageqr-main-container.manageqr-sidebar-collapsed {
+  margin-left: 80px;
+}
+
+/* ===== HEADER ===== */
+.manageqr-header {
+  margin-bottom: 25px;
+}
+
+.manageqr-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #d81b60;
+  position: relative;
+  padding-bottom: 15px;
+}
+
+.manageqr-title::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100px;
+  height: 4px;
+  background: linear-gradient(90deg, #d81b60, #ec407a);
+  border-radius: 2px;
+}
+
+/* CONTROLS - GIỐNG EVENT */
+.manageqr-controls {
+  display: flex;
+  gap: 15px;
+  margin: 25px 0 20px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.manageqr-searchFillter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.manageqr-search-box {
+  position: relative;
+  max-width: 500px;
+  flex: 1;
+}
+
+.manageqr-search-box i {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #d81b60;
+  font-size: 18px;
+}
+
+.manageqr-search-box input {
+  width: 100%;
+  padding: 14px 16px 14px 48px;
+  border: 2px solid #f48fb1;
+  border-radius: 50px;
+  font-size: 16px;
+  background: white;
+  transition: all 0.3s;
+}
+
+.manageqr-search-box input:focus {
+  outline: none;
+  border-color: #d81b60;
+  box-shadow: 0 0 0 4px rgba(216, 27, 96, 0.2);
+}
+
+.manageqr-filter-wrapper {
+  position: relative;
+}
+
+.manageqr-filter-toggle-btn {
+  background: white;
+  border: 2px solid #f48fb1;
+  color: #d81b60;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(216, 27, 96, 0.15);
+  transition: all 0.3s;
+}
+
+.manageqr-filter-toggle-btn:hover {
+  background: #d81b60;
+  color: white;
+  transform: scale(1.05);
+}
+
+.manageqr-filter-menu {
+  position: absolute;
+  top: 58px;
+  right: 0;
+  background: white;
+  border: 2px solid #f48fb1;
+  border-radius: 16px;
+  box-shadow: 0 8px 25px rgba(216, 27, 96, 0.18);
+  z-index: 100;
+  min-width: 180px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.2s ease;
+}
+
+.manageqr-filter-menu.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.manageqr-filter-menu button {
+  display: block;
+  width: 100%;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 15px;
+  color: #d81b60;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.manageqr-filter-menu button:first-child {
+  border-radius: 14px 14px 0 0;
+}
+
+.manageqr-filter-menu button:last-child {
+  border-radius: 0 0 14px 14px;
+}
+
+.manageqr-filter-menu button:hover,
+.manageqr-filter-menu button.active {
+  background: #fce4ec;
+  font-weight: 600;
+}
+
+/* ===== TABLE - KHÔNG CÓ THANH CUỘN NGANG ===== */
+.manageqr-table-wrapper {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 15px rgba(216, 27, 96, 0.09);
+  overflow: hidden;
+  border: 1px solid #f3e5f5;
+  margin-top: 10px;
+}
+
+.manageqr-order-table {
+  width: 100%;
+  table-layout: auto;
+  border-collapse: collapse;
+}
+
+.manageqr-order-table th {
+  background: linear-gradient(135deg, #f8e8ee, #fce4ec);
+  color: #d81b60;
+  padding: 18px 14px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.manageqr-order-table td {
+  padding: 16px 14px;
+  border-bottom: 1px solid #f3e5f5;
+  vertical-align: middle;
+  font-size: 14.5px;
+  color: #424242;
+}
+
+.manageqr-order-table tr:last-child td {
+  border-bottom: none;
+}
+
+.manageqr-order-table tr:hover {
+  background: #fdf6f8;
+}
+
+/* ===== BUTTONS - GIỐNG EVENT ===== */
+.manageqr-btn {
+  background: none;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 6px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.25s;
+}
+
+.manageqr-btn svg {
+  color: #2196f3;
+}
+
+.manageqr-btn-frame:hover {
+  background: #f8e8ee;
+  transform: scale(1.15);
+}
+
+.manageqr-btn-qr svg {
+  color: #d81b60; 
+}
+
+.manageqr-btn-qr:hover {
+  background: #f3e5f5;
+  transform: scale(1.15);
+}
+
+.manageqr-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.manageqr-btn:disabled:hover {
+  transform: none;
+  background: none;
+}
+
+/* ===== LOADING & NO DATA ===== */
+.manageqr-loading,
+.manageqr-no-data {
+  text-align: center;
+  padding: 24px;
+  color: #9e9e9e;
+  font-style: italic;
+  font-size: 16px;
+}
+
+.manageqr-error {
+  background: #ffebee;
+  color: #c62828;
+  padding: 16px 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  border-left: 4px solid #e53935;
+  font-size: 15px;
+}
+
+/* ===== MODALS ===== */
+.manageqr-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  backdrop-filter: blur(6px);
+}
+
+.manageqr-modal-content {
+  background: white;
+  border-radius: 20px;
+  padding: 32px;
+  max-width: 90%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  box-shadow: 0 20px 50px rgba(216, 27, 96, 0.3);
+  animation: modalPop 0.3s ease;
+}
+
+@keyframes modalPop {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.manageqr-modal-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 32px;
+  color: #999;
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  line-height: 1;
+}
+
+.manageqr-modal-close-btn:hover {
+  color: #d81b60;
+  background: #fdf6f8;
+  transform: rotate(90deg);
+}
+
+.manageqr-frame-image,
+.manageqr-qr-image {
+  max-width: 100%;
+  max-height: 70vh;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  object-fit: contain;
+}
+
+.manageqr-qr-placeholder {
+  width: 200px;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f8f8;
+  color: #9e9e9e;
+  border-radius: 12px;
+  font-style: italic;
+  border: 2px dashed #e0e0e0;
+}
+
+.manageqr-qr-link {
+  margin-top: 20px;
+  text-align: center;
+  padding: 12px 20px;
+  background: #fdf6f8;
+  border-radius: 12px;
+  max-width: 100%;
+  word-break: break-all;
+}
+
+.manageqr-qr-link p {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.manageqr-qr-link a {
+  color: #d81b60;
+  text-decoration: underline;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.manageqr-qr-link a:hover {
+  color: #c2185b;
+}
+
+/* ===== PAGINATION - GIỐNG EVENT ===== */
+.manageqr-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 30px;
+  color: #9e9e9e;
+  font-size: 14.5px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.pagination-buttons {
+  display: flex;
+  gap: 9px;
+}
+
+.pagination-buttons button {
+  background: white;
+  border: 1.5px solid #f48fb1;
+  color: #d81b60;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 600;
+}
+
+.pagination-buttons button:hover:not(:disabled) {
+  background: #d81b60;
+  color: white;
+  border-color: #d81b60;
+  transform: translateY(-3px);
+}
+
+.pagination-buttons button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pagination-buttons button.active {
+  background: #d81b60;
+  color: white;
+  border-color: #d81b60;
+  font-weight: 700;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 992px) {
+  .manageqr-main-container {
+    margin-left: 80px;
+    padding: 20px;
+  }
+  
+  .manageqr-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .manageqr-searchFillter {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .manageqr-search-box {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .manageqr-main-container {
+    margin-left: 0;
+    padding: 15px;
+  }
+
+  .manageqr-title {
+    font-size: 24px;
+  }
+
+  .manageqr-order-table {
+    font-size: 13px;
+  }
+
+  .manageqr-order-table th,
+  .manageqr-order-table td {
+    padding: 12px 10px;
+  }
+
+  .pagination-buttons button {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+  }
+}
+
+/* Scrollbar cho toàn bộ container */
+.manageqr-main-container ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.manageqr-main-container ::-webkit-scrollbar-track {
+  background: #fdf6f8;
+  border-radius: 4px;
+}
+
+.manageqr-main-container ::-webkit-scrollbar-thumb {
+  background: #f48fb1;
+  border-radius: 4px;
+}
+
+.manageqr-main-container ::-webkit-scrollbar-thumb:hover {
+  background: #ec407a;
+}
+
+
+/* ===== LAYOUT 2 CỘT ===== */
+/* ===== LAYOUT 2 CỘT ===== */
+.manageqr-content-grid {
+  display: flex;
+  gap: 30px;
+  margin-top: 20px;
+}
+
+.manageqr-orders-section {
+  flex: 0 0 65%;
+  max-width: 65%;
+}
+
+.manageqr-top-frames-section {
+  flex: 0 0 35%;
+  max-width: 35%;
+}
+
+/* ===== TOP FRAMES TABLE ===== */
+.manageqr-top-frames-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #d81b60;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #f3e5f5;
+}
+
+.manageqr-top-frames-table-wrapper {
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 3px 12px rgba(216, 27, 96, 0.08);
+  border: 1px solid #f3e5f5;
+  overflow: hidden;
+}
+
+.manageqr-top-frames-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.manageqr-top-frames-table th {
+  background: linear-gradient(135deg, #f8e8ee, #fce4ec);
+  color: #d81b60;
+  padding: 16px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.manageqr-top-frames-table td {
+  padding: 16px 12px;
+  border-bottom: 1px solid #f3e5f5;
+  color: #424242;
+}
+
+.manageqr-top-frames-table tr:last-child td {
+  border-bottom: none;
+}
+
+.manageqr-top-frame-preview {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.manageqr-no-image {
+  color: #9e9e9e;
+  font-style: italic;
+}

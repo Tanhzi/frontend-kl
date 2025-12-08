@@ -1,0 +1,26 @@
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+  background-color: #fff0f5;
+  font-family: 'Quicksand', 'Arial', sans-serif; 
+}
+
+/* Đếm ngược — góc trên trái */
+.countdown {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 22px;
+  font-weight: 800;
+  color: #d81b60;
+  padding: 8px 16px;
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.countdown::before {
+  animation: pulse 1.5s infinite;
+}

@@ -1,0 +1,199 @@
+/* src/admin/Page/Pricecut/Pricecut.css */
+
+.pricecut-main-container {
+  margin-left: 280px;
+  margin-top: 70px;
+  padding: 30px;
+  min-height: calc(100vh - 70px);
+  transition: margin-left 0.3s ease;
+  background: #fdf6f8;
+}
+
+.pricecut-main-container.pricecut-sidebar-collapsed {
+  margin-left: 80px;
+}
+
+/* ===== HEADER & SELECT ===== */
+.pricecut-header-section {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
+}
+
+.pricecut-heading {
+  font-size: 32px;
+  font-weight: 700;
+  color: #d81b60;
+  position: relative;
+  padding-bottom: 15px;
+}
+
+.pricecut-heading::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 60px;
+  height: 4px;
+  background: linear-gradient(90deg, #d81b60, #ec407a);
+  border-radius: 2px;
+}
+
+.pricecut-size-select {
+  padding: 14px 20px;
+  border: 2px solid #f48fb1;
+  border-radius: 50px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #424242;
+  background: white;
+  outline: none;
+  min-width: 160px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pricecut-size-select:hover,
+.pricecut-size-select:focus {
+  box-shadow: 0 4px 10px rgba(216, 27, 96, 0.15);
+}
+
+/* ===== TABLE ===== */
+.pricecut-table-wrapper {
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 3px 12px rgba(216, 27, 96, 0.08);
+  border: 1px solid #f3e5f5;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.pricecut-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.pricecut-table th {
+  background: linear-gradient(135deg, #f8e8ee, #fce4ec);
+  color: #d81b60;
+  padding: 18px 15px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.pricecut-table td {
+  padding: 18px 15px;
+  border-bottom: 1px solid #f3e5f5;
+  color: #424242;
+}
+
+.pricecut-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.pricecut-table tbody tr:hover {
+  background: #fdf6f8;
+}
+
+/* ===== INPUTS IN TABLE ===== */
+.pricecut-table input {
+  width: 100%;
+  padding: 14px;
+  border: 2px solid #f48fb1;
+  border-radius: 12px;
+  font-size: 16px;
+  outline: none;
+  background: #fdf6f8;
+  transition: all 0.2s;
+}
+
+.pricecut-table input:focus {
+  border-color: #d81b60;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(216, 27, 96, 0.15);
+}
+
+/* ===== UPDATE BUTTON ===== */
+.pricecut-update-btn {
+  background: linear-gradient(135deg, #d81b60, #f06292);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  padding: 14px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-top: 20px;
+  display: block;
+  margin-left: auto;
+}
+
+.pricecut-update-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(216, 27, 96, 0.3);
+  opacity: 0.95;
+}
+
+/* ===== LOADING ===== */
+.pricecut-loading {
+  text-align: center;
+  padding: 24px;
+  color: #9e9e9e;
+  font-style: italic;
+  font-size: 16px;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .pricecut-main-container {
+    margin-left: 0;
+    padding: 20px;
+  }
+
+  .pricecut-header-section {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .pricecut-size-select {
+    width: 100%;
+    border-radius: 12px;
+  }
+
+  .pricecut-table {
+    font-size: 14px;
+  }
+
+  .pricecut-table th,
+  .pricecut-table td {
+    padding: 14px 12px;
+  }
+
+  .pricecut-table input {
+    padding: 12px;
+    font-size: 15px;
+  }
+}
+
+/* Scrollbar */
+.pricecut-main-container ::-webkit-scrollbar {
+  width: 8px;
+}
+
+.pricecut-main-container ::-webkit-scrollbar-track {
+  background: #fdf6f8;
+}
+
+.pricecut-main-container ::-webkit-scrollbar-thumb {
+  background: #f48fb1;
+  border-radius: 4px;
+}
+
+.pricecut-main-container ::-webkit-scrollbar-thumb:hover {
+  background: #ec407a;
+}

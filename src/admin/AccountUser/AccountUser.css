@@ -1,0 +1,343 @@
+/* src/admin/Page/AccountUser/AccountUser.css */
+.accountuserpro-root {
+  font-family: 'Poppins', sans-serif;
+  background: #fdf6f8;
+  min-height: 100vh;
+}
+
+.accountuserpro-container {
+  margin-left: 280px;
+  margin-top: 70px;
+  padding: 30px;
+  min-height: calc(100vh - 70px);
+  transition: margin-left 0.3s ease;
+  background: #fdf6f8;
+}
+
+.accountuserpro-container.sidebar-collapsed {
+  margin-left: 80px;
+}
+
+.accountuserpro-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #d81b60;
+  position: relative;
+  padding-bottom: 15px;
+}
+
+.accountuserpro-title::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100px;
+  height: 4px;
+  background: linear-gradient(90deg, #d81b60, #ec407a);
+  border-radius: 2px;
+}
+
+.accountuserpro-controls {
+  display: flex;
+  gap: 15px;
+  margin: 25px 0 20px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.accountuserpro-search {
+  position: relative;
+  max-width: 500px;
+  flex: 1;
+}
+
+.accountuserpro-search i {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #d81b60;
+  font-size: 18px;
+  z-index: 1;
+}
+
+.accountuserpro-search input {
+  width: 100%;
+  padding: 14px 16px 14px 48px;
+  border: 2px solid #f48fb1;
+  border-radius: 50px;
+  font-size: 16px;
+  background: white;
+  transition: all 0.3s;
+}
+
+.accountuserpro-search input:focus {
+  outline: none;
+  border-color: #d81b60;
+  box-shadow: 0 0 0 4px rgba(216, 27, 96, 0.2);
+}
+
+.btn-pink {
+  padding: 12px 26px;
+  border: none;
+  border-radius: 50px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 15px;
+  color: white;
+  background: linear-gradient(135deg, #e91e63, #c2185b);
+  box-shadow: 0 4px 15px rgba(233, 30, 99, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-pink:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(233, 30, 99, 0.45);
+}
+
+.batch-delete-btn {
+  background: linear-gradient(135deg, #f8bbd0, #f48fb1) !important;
+  color: #d81b60 !important;
+  cursor: not-allowed;
+  opacity: 0.7;
+  transition: all 0.3s ease;
+}
+
+.batch-delete-btn:not(.disabled) {
+  background: linear-gradient(135deg, #e91e63, #c2185b) !important;
+  color: white !important;
+  cursor: pointer;
+  opacity: 1;
+}
+
+.batch-delete-btn:not(.disabled):hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(233, 30, 99, 0.45);
+}
+
+.accountuserpro-table-wrapper {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 15px rgba(216, 27, 96, 0.09);
+  overflow: hidden;
+  border: 1px solid #f3e5f5;
+  margin-top: 10px;
+}
+
+.accountuserpro-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.accountuserpro-table th {
+  background: linear-gradient(135deg, #f8e8ee, #fce4ec);
+  color: #d81b60;
+  padding: 18px 14px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.accountuserpro-table td {
+  padding: 16px 14px;
+  border-bottom: 1px solid #f3e5f5;
+  vertical-align: middle;
+  font-size: 14.5px;
+}
+
+.accountuserpro-table tr:hover {
+  background: #fdf6f8;
+}
+
+.accountuserpro-table tr.selected-row {
+  background: #fce4ec !important;
+  font-weight: 600;
+  border-left: 5px solid #d81b60;
+}
+
+.accountuserpro-actions {
+  white-space: nowrap;
+  text-align: center;
+}
+
+.accountuserpro-actions button {
+  background: none;
+  border: none;
+  font-size: 19px;
+  cursor: pointer;
+  padding: 9px;
+  border-radius: 50%;
+  margin: 0 6px;
+  transition: all 0.25s;
+}
+
+.edit-btn { color: #2196f3; }
+.edit-btn:hover { background: #e3f2fd; transform: scale(1.15); }
+
+.delete-btn { color: #e91e63; }
+.delete-btn:hover { background: #fce4ec; transform: scale(1.15); }
+
+.accountuserpro-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 30px;
+  color: #9e9e9e;
+  font-size: 14.5px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.pagination-buttons {
+  display: flex;
+  gap: 9px;
+}
+
+.pagination-buttons button {
+  background: white;
+  border: 1.5px solid #f48fb1;
+  color: #d81b60;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 600;
+}
+
+.pagination-buttons button:hover {
+  background: #d81b60;
+  color: white;
+  border-color: #d81b60;
+  transform: translateY(-3px);
+}
+
+.pagination-buttons button.active {
+  background: #d81b60;
+  color: white;
+  border-color: #d81b60;
+  font-weight: 700;
+}
+
+.custom-checkbox {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f48fb1;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.custom-checkbox:checked {
+  background: #d81b60;
+  border-color: #d81b60;
+}
+
+.custom-checkbox:checked::after {
+  content: '✓';
+  position: absolute;
+  color: white;
+  font-weight: bold;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+}
+
+.accountuserpro-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  backdrop-filter: blur(6px);
+}
+
+.accountuserpro-modal-content {
+  background: white;
+  border-radius: 20px;
+  padding: 32px;
+  width: 90%;
+  max-width: 520px;
+  box-shadow: 0 20px 50px rgba(216, 27, 96, 0.3);
+  animation: modalPop 0.42s ease;
+}
+
+.accountuserpro-modal-content h3 {
+  color: #d81b60;
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 24px;
+}
+
+.modal-field {
+  margin-bottom: 20px;
+}
+
+.modal-field label {
+  display: block;
+  margin-bottom: 8px;
+  color: #d81b60;
+  font-weight: 600;
+}
+
+.modal-field input {
+  width: 100%;
+  padding: 14px;
+  border: 2px solid #f48fb1;
+  border-radius: 12px;
+  font-size: 16px;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 30px;
+}
+
+.modal-buttons .cancel {
+  background: #e0e0e0;
+  color: #666;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 50px;
+  cursor: pointer;
+}
+
+.modal-buttons .submit {
+  background: linear-gradient(135deg, #e91e63, #c2185b);
+  color: white;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 50px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+@keyframes modalPop {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+  .accountuserpro-container {
+    margin-left: 80px;
+    padding: 20px;
+  }
+  .accountuserpro-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

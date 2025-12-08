@@ -1,0 +1,211 @@
+/* ===== MAIN CONTAINER ===== */
+.camera-main-container {
+  margin-left: 280px;
+  margin-top: 70px;
+  padding: 30px;
+  min-height: calc(100vh - 70px);
+  transition: margin-left 0.3s ease;
+  background-color: #fdf6f8;
+}
+
+.camera-main-container.camera-sidebar-collapsed {
+  margin-left: 80px;
+}
+
+/* ===== TITLE ===== */
+.camera-settings-title {
+  font-size: 28px;
+  color: #d81b60;
+  font-weight: 700;
+  margin-bottom: 24px;
+  position: relative;
+  padding-bottom: 10px;
+}
+
+.camera-settings-title::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, #d81b60, #f06292);
+  border-radius: 2px;
+}
+
+/* ===== CONTENT LAYOUT ===== */
+.camera-settings-content {
+  display: flex;
+  gap: 24px;
+  height: calc(100vh - 180px);
+}
+
+/* ===== LIVE VIEW ===== */
+.camera-live-view {
+  flex: 3;
+  background: #000;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 20px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* ===== SETTINGS PANEL ===== */
+.camera-settings-panel {
+  flex: 1;
+  background: white;
+  padding: 24px;
+  border-radius: 15px;
+  box-shadow: 0 4px 16px rgba(216, 27, 96, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.camera-settings-panel h2 {
+  font-size: 20px;
+  color: #d81b60;
+  font-weight: 600;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f3e5f5;
+}
+
+/* ===== TIME INPUTS ===== */
+.camera-time-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.camera-time-input label {
+  display: block;
+  font-weight: 500;
+  color: #616161;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.camera-time-input input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 15px;
+  outline: none;
+  background: white;
+}
+
+.camera-time-input input:focus {
+  border-color: #d81b60;
+  box-shadow: 0 0 0 2px rgba(216, 27, 96, 0.1);
+}
+
+/* ===== TOGGLE SWITCH ===== */
+.camera-toggle-video {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.camera-toggle-video label:first-child {
+  font-weight: 500;
+  color: #424242;
+  font-size: 15px;
+}
+
+/* Custom switch */
+.camera-toggle-video .switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 26px;
+}
+
+.camera-toggle-video .switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.camera-toggle-video .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #f5f5f5;
+  transition: 0.3s;
+  border-radius: 26px;
+}
+
+.camera-toggle-video .slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.camera-toggle-video input:checked + .slider {
+  background: linear-gradient(135deg, #f48fb1, #d81b60);
+}
+
+.camera-toggle-video input:checked + .slider:before {
+  transform: translateX(24px);
+}
+
+/* ===== SAVE BUTTON ===== */
+.camera-save-button {
+  background: linear-gradient(135deg, #f48fb1, #d81b60);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+  margin-top: auto;
+}
+
+.camera-save-button:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(216, 27, 96, 0.3);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 992px) {
+  .camera-settings-content {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .camera-live-view {
+    height: 400px;
+  }
+}
+
+@media (max-width: 768px) {
+  .camera-main-container {
+    margin-left: 0;
+    padding: 20px;
+  }
+
+  .camera-live-view {
+    height: 300px;
+    font-size: 18px;
+  }
+}

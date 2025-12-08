@@ -1,0 +1,335 @@
+/* ======== Discount.css — PHIÊN BẢN ĐỒNG BỘ MÀU HỒNG SWEET LENS ======== */
+
+/* Container chính */
+.discount-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* Phần voucher — căn trái, chiếm 60% trên desktop */
+.voucher-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-left: 160px;
+  width: 100%;
+  max-width: 600px;
+  padding: 30px;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 24px;
+  box-shadow: 0 8px 30px rgba(255, 105, 180, 0.15);
+  backdrop-filter: blur(10px);
+  border: 3px solid #ffb6c1;
+}
+
+/* Nhãn "Voucher Code" */
+.voucher-label {
+  font-weight: 800;
+  color: #d81b60;
+  font-size: 28px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.voucher-label::before {
+  content: '💖';
+  animation: heartbeat 1.4s ease-in-out infinite;
+  font-size: 24px;
+}
+
+/* Wrapper nhập mã + nút áp dụng */
+.voucher-input-wrapper {
+  display: flex;
+  width: 100%;
+  gap: 12px;
+  margin-bottom: 25px;
+}
+
+.voucher-input {
+  flex: 1;
+  padding: 16px 20px;
+  border: 3px solid #ffb6c1;
+  border-radius: 50px;
+  font-size: 20px;
+  background-color: #fff9fb;
+  text-align: center;
+  color: #d81b60;
+  font-weight: 600;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.voucher-input:focus {
+  outline: none;
+  border-color: #ff69b4;
+  box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.2);
+}
+
+.apply-discount {
+  padding: 16px 28px;
+  font-size: 20px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #ff69b4, #d81b60);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(216, 27, 96, 0.3);
+  white-space: nowrap;
+  min-width: 140px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.apply-discount:hover {
+  background: linear-gradient(135deg, #d81b60, #c71585);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(199, 21, 133, 0.4);
+}
+
+.apply-discount:active {
+  transform: translateY(0);
+}
+
+/* Thông tin thanh toán */
+.payment-info {
+  background: rgba(255, 245, 250, 0.7);
+  border-radius: 18px;
+  padding: 24px;
+  margin: 25px 0;
+  width: 100%;
+  border: 2px dashed #ffb6c1;
+}
+
+.payment-info p {
+  margin: 8px 0;
+  font-size: 20px;
+  color: #333;
+  font-weight: 600;
+}
+
+.amount-needed,
+.amount-paid,
+.amount-remaining {
+  color: #d81b60;
+  font-weight: 700;
+  font-size: 22px;
+}
+
+.amount-remaining {
+  color: #ff69b4;
+}
+
+/* Input hiển thị số tiền đã nạp */
+.deposit-input-wrapper {
+  width: 100%;
+  margin-top: 15px;
+}
+
+.deposit-input {
+  width: 100%;
+  padding: 16px 20px;
+  font-size: 22px;
+  font-weight: 700;
+  border: 3px solid #ffb6c1;
+  border-radius: 50px;
+  text-align: center;
+  background-color: #fff9fb;
+  color: #d81b60;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+/* Bàn phím ảo */
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  width: 100%;
+  max-width: 300px;
+  margin: 30px auto 0;
+}
+
+.key {
+  aspect-ratio: 1/1;
+  font-size: 24px;
+  border-radius: 20px;
+  border: none;
+  background: linear-gradient(135deg, #fff0f5, #fff9fb);
+  color: #d81b60;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(255, 105, 180, 0.1);
+  transition: all 0.2s ease;
+  border: 2px solid #ffb6c1;
+}
+
+.key:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(255, 105, 180, 0.2);
+}
+
+.key:active {
+  transform: translateY(0);
+}
+
+.key.arrow {
+  background: linear-gradient(135deg, #ff69b4, #d81b60);
+  color: white;
+  font-size: 28px;
+  border: none;
+}
+
+.key.arrow:hover {
+  background: linear-gradient(135deg, #d81b60, #c71585);
+  transform: translateY(-4px) scale(1.05);
+}
+
+/* Nút quay lại */
+.back-button {
+  margin-top: 30px;
+  padding: 14px 32px;
+  background: linear-gradient(135deg, #ffb6c1, #ff69b4);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(255, 105, 180, 0.2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.back-button:hover {
+  background: linear-gradient(135deg, #ff69b4, #ff1493);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(255, 105, 180, 0.3);
+}
+
+.back-button:active {
+  transform: translateY(0);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .discount-container {
+    padding: 10px;
+  }
+
+  .voucher-section {
+    width: 100%;
+    max-width: none;
+    padding: 20px;
+    margin: 0 10px;
+  }
+
+  .voucher-label {
+    font-size: 24px;
+  }
+
+  .voucher-input-wrapper {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .voucher-input {
+    width: 100%;
+    padding: 14px;
+    font-size: 18px;
+  }
+
+  .apply-discount {
+    padding: 14px;
+    font-size: 18px;
+    width: 100%;
+  }
+
+  .payment-info {
+    padding: 16px;
+    margin: 20px 0;
+  }
+
+  .payment-info p {
+    font-size: 18px;
+  }
+
+  .amount-needed,
+  .amount-paid,
+  .amount-remaining {
+    font-size: 20px;
+  }
+
+  .keypad {
+    max-width: 280px;
+    gap: 12px;
+    margin: 25px auto 0;
+  }
+
+  .key {
+    font-size: 22px;
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .key.arrow {
+    font-size: 24px;
+  }
+
+  .back-button {
+    padding: 12px 24px;
+    font-size: 16px;
+    margin-top: 25px;
+  }
+}
+
+@media (max-width: 480px) {
+  .voucher-section {
+    padding: 16px;
+  }
+
+  .voucher-label {
+    font-size: 22px;
+  }
+
+  .payment-info p {
+    font-size: 16px;
+  }
+
+  .amount-needed,
+  .amount-paid,
+  .amount-remaining {
+    font-size: 18px;
+  }
+
+  .keypad {
+    max-width: 240px;
+    gap: 10px;
+  }
+
+  .key {
+    font-size: 20px;
+    padding: 10px;
+  }
+}
+
+/* Animation */
+@keyframes heartbeat {
+  0% { transform: scale(1); }
+  14% { transform: scale(1.15); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.15); }
+  70% { transform: scale(1); }
+}

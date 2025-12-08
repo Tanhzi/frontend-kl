@@ -1,0 +1,238 @@
+/* ======== Beframe.css — ĐÃ FIX LỖI LAYOUT 40-60 ======== */
+
+.frame-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; 
+  align-items: center;
+  width: 100%;
+  max-width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 20px 0; /* Chỉ để padding top và bottom */
+  margin: 0;
+  overflow-x: hidden; /* Ngăn chặn tràn ngang */
+  overflow-y: hidden;
+}
+
+/* Tiêu đề */
+.touch-to-crecuts {
+  font-size: 28px;
+  color: #d81b60;
+  font-weight: 800;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 10px;
+  margin-bottom: 15px;
+  height: 40px; /* Cố định chiều cao tiêu đề */
+  flex-shrink: 0;
+}
+
+/* ======== NỘI DUNG CHÍNH (QUAN TRỌNG) ======== */
+.frame-content {
+  display: flex;
+  flex-direction: row; /* Bắt buộc hàng ngang */
+  flex-wrap: nowrap;   /* Không cho phép xuống dòng */
+  width: 100%;         /* Chiếm toàn bộ chiều ngang */
+  max-width: 100%;     /* Đảm bảo không vượt quá chiều rộng màn hình */
+  height: calc(100vh - 140px); /* Tự động tính chiều cao còn lại (trừ header/footer) */
+  gap: 15px;
+  box-sizing: border-box;
+  align-items: stretch; /* Kéo dãn 2 cột bằng nhau */
+  padding: 40px;           /* Loại bỏ padding ngang */
+  margin: 0;            /* Loại bỏ margin ngang */
+}
+
+/* --- CỘT TRÁI (HIỂN THỊ ẢNH) - 40% --- */
+.col-left {
+  flex: 0 0 40%; /* Cố định cứng 40% */
+  width: 40%;
+  max-width: 40%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 20px;
+  padding: 10px;
+  box-shadow: 0 4px 15px rgba(255, 105, 180, 0.15);
+  border: 2px solid #ffb6c1;
+  overflow: hidden;
+  height: 100%; /* Full chiều cao container */
+}
+
+.image-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 15px;
+  overflow: hidden;
+  position: relative;
+}
+
+.selected-frame-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain; /* Ảnh nằm gọn trong khung */
+  display: block;
+  border: 2px solid #ff8fa0; 
+}
+
+.no-image {
+  color: #ff69b4;
+  font-weight: 600;
+}
+
+/* --- CỘT PHẢI (CHỌN KHUNG) - 60% --- */
+.col-right {
+  flex: 0 0 60%; /* Cố định cứng 60% */
+  width: 60%;
+  max-width: 60%;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 20px;
+  padding: 15px;
+  box-shadow: 0 4px 15px rgba(255, 105, 180, 0.15);
+  border: 2px solid #ffb6c1;
+  overflow: hidden;
+  height: 100%; /* Full chiều cao container */
+}
+
+/* Tab chọn loại */
+.frame-tabs {
+  display: flex;
+  gap: 10px;
+  padding-bottom: 15px;
+  margin-bottom: 15px;
+  border-bottom: 1px dashed #ffb6c1;
+  overflow-x: auto;
+  flex-shrink: 0; /* Không cho phép tab bị co lại */
+}
+
+.tab {
+  padding: 8px 20px;
+  white-space: nowrap;
+  border: none;
+  background: white;
+  border-radius: 20px;
+  color: #ff69b4;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  transition: all 0.2s;
+}
+
+.tab.active {
+  background: #d81b60;
+  color: white;
+  font-weight: 700;
+}
+
+/* Khu vực chứa thumbnails */
+.frame-thumbnails {
+  flex: 1; /* Chiếm toàn bộ không gian còn lại */
+  overflow-y: auto; /* Cho phép cuộn dọc NỘI BỘ khu vực này */
+  padding: 5px;
+  background: #fff0f5;
+  border-radius: 12px;
+}
+
+.thumbnails-wrapper {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  padding: 16px;
+  min-width: 100%;
+  box-sizing: border-box;
+}
+
+.thumbnail {
+  /* Giữ nguyên kích thước */
+  max-width: 180px;
+  max-height: 180px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  
+  /* ✨ THAY ĐỔI Ở ĐÂY: Đổi transparent thành mã màu hồng nhạt */
+  border: 2px solid #ffb6c1; 
+  
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  /* Màu nền bên trong thumbnail */
+  background: rgb(255, 237, 252); 
+  padding: 5px;
+  box-sizing: border-box;
+}
+
+/* Hiệu ứng khi di chuột vào (đổi sang hồng đậm hơn) */
+.thumbnail:hover {
+  transform: translateY(-4px) scale(1.03);
+  box-shadow: 0 8px 20px rgba(255, 105, 180, 0.2);
+  border-color: #ff69b4; /* Hồng đậm hơn khi hover */
+}
+
+/* Hiệu ứng khi ĐANG ĐƯỢC CHỌN (Hồng đậm nhất + bóng đổ) */
+.thumbnail.selected {
+  border-color: #d81b60; /* Màu chủ đạo đậm nhất */
+  box-shadow: 0 0 0 3px rgba(216, 27, 96, 0.2), 0 6px 16px rgba(216, 27, 96, 0.1);
+  transform: translateY(-2px);
+  background: #ffffff; /* Nền trắng để nổi bật ảnh đã chọn */
+}
+
+/* Footer Nút bấm */
+.frame-footer {
+  height: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.continue-btn {
+  background: linear-gradient(135deg, #ff69b4, #d81b60);
+  color: white;
+  border: none;
+  padding: 12px 50px;
+  font-size: 20px;
+  font-weight: 700;
+  border-radius: 50px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(216, 27, 96, 0.4);
+  text-transform: uppercase;
+}
+
+/* ======== RESPONSIVE ======== */
+/* Chỉ chuyển sang dọc khi màn hình thực sự nhỏ (Dưới 768px - Điện thoại) */
+@media (max-width: 768px) {
+  .frame-content {
+    flex-direction: column; /* Lúc này mới cho xếp dọc */
+    height: auto;
+    overflow-y: auto;
+  }
+
+  .col-left {
+    flex: none;
+    width: 100%;
+    max-width: 100%;
+    height: 300px; /* Chiều cao cố định cho ảnh trên mobile */
+    margin-bottom: 15px;
+  }
+
+  .col-right {
+    flex: none;
+    width: 100%;
+    max-width: 100%;
+    height: 400px;
+  }
+  
+  .thumbnails-wrapper {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

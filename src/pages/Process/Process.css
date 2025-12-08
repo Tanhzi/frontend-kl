@@ -1,0 +1,287 @@
+/* App Container */
+.app-container-custom {
+  padding: 50px;
+  font-family: 'Arial', sans-serif;
+  background-color: #fff;
+  position: relative;
+  /* Giúp phần instructions có thể "thoát" khỏi container */
+}
+
+/* Logo */
+.logo-container-custom {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 20px;
+  flex-wrap: nowrap;
+  margin-bottom: 20px;
+  padding-left: 30px;
+}
+
+.logo-custom {
+  margin-top: 20px;
+  width: 200px;
+  max-height: 100px;
+  object-fit: contain;
+  border-radius: 12px;
+  padding: 4px;
+  transition: transform 0.3s ease;
+}
+
+
+/* Main Title */
+.main-title {
+  font-size: 70px;
+  color: #f76cba;
+  font-weight: bold;
+  padding-top: 40px;
+  padding-left: 250px;
+}
+
+/* Sub Title */
+.sub-title-custom {
+  font-size: 34px;
+  margin-bottom: 35px;
+  margin-left: 20px;
+}
+
+/* Info Boxes */
+
+
+/* Info Box Custom */
+.info-box-custom {
+  display: inline-flex;
+  /* Khung sẽ co lại theo nội dung bên trong */
+  justify-content: center;
+  /* Căn giữa nội dung trong khung */
+  align-items: center;
+  /* Căn giữa theo chiều dọc */
+  margin: 20px auto;
+  /* Căn giữa khung trong container */
+  padding: 25px 15px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 18px;
+  border: 2px solid #ffb6c1;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(255, 105, 180, 0.1);
+  pointer-events: auto;
+  transition: all 0.3s ease;
+}
+
+.info-box-custom:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(255, 105, 180, 0.25);
+  border-color: #ff69b4;
+}
+
+.info-box-custom p {
+  color: #d81b60;
+  font-weight: 600;
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.5;
+  white-space: pre-line;
+  /* Để hiển thị \n trong note */
+}
+
+
+/* Instructions (Nằm ngoài Container + Nền xám đậm hơn) */
+.instructions {
+  background-color: #a9a9a9c0;
+  /* 🌟 Xám đậm hơn */
+  padding: 30px 10px;
+  color: #fff;
+  margin-top: 40px;
+  margin-left: -50px;
+  /* Đẩy ra ngoài container */
+  margin-right: -50px;
+}
+
+.instruction-item {
+  display: flex;
+  /* Đặt flex để xếp theo hàng ngang */
+  align-items: center;
+  /* Căn giữa theo chiều dọc */
+  justify-content: center;
+  /* Căn giữa theo chiều ngang */
+  margin-bottom: 20px;
+  gap: 15px;
+  /* Khoảng cách giữa số thứ tự và nội dung */
+}
+
+/* Heart Shape for Numbers */
+/* Heart Shape with Number */
+.heart {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  color: #f76cba;
+  font-size: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.heart i {
+  position: absolute;
+}
+
+.heart-number {
+  position: absolute;
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+/* Button Style */
+.thank-you-btn {
+  background-color: #f76cba;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 25px;
+  font-size: 16px;
+  margin-top: 20px;
+  cursor: pointer;
+}
+
+.thank-you-btn:hover {
+  background-color: #e45da4;
+}
+
+/* Countdown Timer (Fixed for 10 seconds) */
+.timer-custom {
+  font-size: 50px;
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  color: #f76cba;
+  font-weight: bold;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .main-title {
+    font-size: 48px;
+  }
+
+  .sub-title-custom {
+    font-size: 24px;
+  }
+
+  .info-box-custom {
+    font-size: 16px;
+    /* Adjust font size for medium screens */
+    padding: 20px;
+    /* Adjust padding */
+  }
+
+
+  .instructions {
+    margin-left: -20px;
+    margin-right: -20px;
+    padding: 20px 5px;
+  }
+
+  /* Adjust heart size */
+  .heart {
+    width: 40px;
+    height: 40px;
+  }
+
+  .heart-number {
+    font-size: 16px;
+    /* Giảm kích thước số khi màn hình nhỏ */
+  }
+
+  /* Timer */
+  .timer-custom {
+    font-size: 40px;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-title {
+    font-size: 36px;
+    padding-left: 30px;
+  }
+
+  .sub-title-custom {
+    font-size: 18px;
+  }
+
+  .info-box-custom {
+    font-size: 14px;
+    /* Adjust font size for smaller screens */
+    padding: 15px;
+    /* Adjust padding */
+  }
+
+  .instructions {
+    margin-left: -20px;
+    margin-right: -20px;
+    padding: 15px;
+  }
+
+  .heart {
+    width: 35px;
+    height: 35px;
+  }
+
+  .heart-number {
+    font-size: 14px;
+  }
+
+  /* Timer */
+  .timer-custom {
+    font-size: 35px;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-title {
+    font-size: 28px;
+    padding-left: 20px;
+  }
+
+  .sub-title-custom {
+    font-size: 16px;
+  }
+
+  .info-box-custom {
+    font-size: 12px;
+    /* Adjust font size for very small screens */
+    padding: 10px;
+    /* Adjust padding */
+  }
+
+  .instructions {
+    padding: 10px;
+  }
+
+  .heart {
+    width: 30px;
+    height: 30px;
+  }
+
+  .heart-number {
+    font-size: 12px;
+    /* Kích thước số nhỏ nhất */
+  }
+
+  /* Timer */
+  .timer-custom {
+    font-size: 30px;
+  }
+}
+
+
+.touch-to {
+  font-size: 50px;
+  color: #f76cba;
+  font-weight: bold;
+  text-align: center;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}

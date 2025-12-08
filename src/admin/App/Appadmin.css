@@ -1,0 +1,226 @@
+/* ===== MAIN CONTAINER ===== */
+.appadmin-main-container {
+  margin-left: 280px;
+  margin-top: 70px;
+  padding: 30px;
+  /* Thay min-height bằng height + overflow */
+  height: calc(100vh - 70px);
+  overflow-y: auto; /* 👈 quan trọng: bật cuộn dọc */
+  transition: margin-left 0.3s ease;
+  background-color: #fdf6f8;
+  box-sizing: border-box; /* đảm bảo padding không làm tràn */
+}
+
+.appadmin-main-container.appadmin-sidebar-collapsed {
+  margin-left: 80px;
+}
+
+/* ===== TITLE ===== */
+.appadmin-title {
+  margin-bottom: 30px;
+}
+
+.appadmin-overview-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #d81b60;
+  position: relative;
+  padding-bottom: 15px;
+}
+
+.appadmin-overview-title::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 60px;
+  height: 4px;
+  background: linear-gradient(90deg, #d81b60, #ec407a);
+  border-radius: 2px;
+}
+
+/* ===== STATS ROW ===== */
+.appadmin-stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.appadmin-stat-card {
+  flex: 1;
+  min-width: 280px;
+}
+
+/* ===== CARD STYLING ===== */
+.appadmin-card-box {
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 3px 12px rgba(216, 27, 96, 0.08);
+  border: 1px solid #f3e5f5;
+  transition: all 0.3s;
+  height: 100%;
+}
+
+.appadmin-card-box:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 20px rgba(216, 27, 96, 0.15);
+}
+
+.appadmin-card-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 25px;
+  position: relative;
+  overflow: hidden;
+}
+
+.appadmin-card-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100px;
+  height: 100px;
+  background: linear-gradient(135deg, rgba(216, 27, 96, 0.06), transparent);
+  border-radius: 0 0 0 100px;
+}
+
+.appadmin-widget-data {
+  flex: 1;
+}
+
+.appadmin-machine-count,
+.appadmin-customer-count,
+.appadmin-income {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, #d81b60, #f06292);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.appadmin-label {
+  font-size: 14px;
+  color: #9e9e9e;
+  font-weight: 500;
+}
+
+.appadmin-widget-icon {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.appadmin-icon {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: white;
+}
+
+.appadmin-icon-machine {
+  background: linear-gradient(135deg, #f48fb1, #d81b60);
+}
+
+.appadmin-icon-customer,
+.appadmin-icon-income {
+  background: linear-gradient(135deg, #f06292, #d81b60);
+}
+
+/* ===== CHART BOX ===== */
+.appadmin-chart-box {
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 3px 12px rgba(216, 27, 96, 0.08);
+  border: 1px solid #f3e5f5;
+  padding: 25px;
+}
+
+.appadmin-chart-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: #d81b60;
+}
+
+.appadmin-chart-container {
+  margin-top: 20px;
+  height: 350px;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1200px) {
+  .appadmin-stat-card {
+    flex: 0 0 calc(50% - 10px);
+  }
+}
+
+@media (max-width: 768px) {
+  .appadmin-main-container {
+    margin-left: 0;
+    margin-top: 70px;
+    padding: 20px;
+  }
+
+  .appadmin-stat-card {
+    flex: 1 1 100%;
+  }
+}
+
+/* ===== ANIMATIONS ===== */
+.appadmin-card-box {
+  animation: appadminFadeInUp 0.5s ease;
+}
+
+.appadmin-stat-card:nth-child(1) .appadmin-card-box {
+  animation-delay: 0.1s;
+}
+
+.appadmin-stat-card:nth-child(2) .appadmin-card-box {
+  animation-delay: 0.2s;
+}
+
+.appadmin-stat-card:nth-child(3) .appadmin-card-box {
+  animation-delay: 0.3s;
+}
+
+@keyframes appadminFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #fdf6f8;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #f48fb1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #ec407a;
+}

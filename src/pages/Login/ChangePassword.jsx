@@ -6,12 +6,14 @@ function ChangePassword() {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
-  // Lấy thông tin user từ localStorage
   const getAuth = () => {
     const saved = localStorage.getItem('auth');
     return saved ? JSON.parse(saved) : null;
@@ -19,7 +21,6 @@ function ChangePassword() {
 
   const auth = getAuth();
 
-  // Nếu chưa đăng nhập, chuyển về trang chủ
   useEffect(() => {
     if (!auth) {
       navigate('/');
@@ -53,8 +54,8 @@ function ChangePassword() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: auth.id,                 // 👈 GỬI ID TỪ LOCALSTORAGE
-          old_password: oldPassword,   // lưu ý: snake_case như backend
+          id: auth.id,
+          old_password: oldPassword,
           password: newPassword,
           password_confirmation: confirmPassword,
         }),
@@ -76,7 +77,7 @@ function ChangePassword() {
     }
   };
 
-  if (!auth) return null; // hoặc redirect
+  if (!auth) return null;
 
   return (
     <div className={`auth-container ${isLoading ? 'fade-in' : ''}`}>
@@ -93,47 +94,116 @@ function ChangePassword() {
         </div>
       )}
 
-      <form className="auth-form" onSubmit={handleChangePassword}>
-        <div className="input-group">
-          <span className="icon">🗝️</span>
-          <input
-            type="password"
-            placeholder="Mật khẩu cũ"
-            value={oldPassword}
-            onChange={(e) => setOldPassword(e.target.value)}
-            aria-label="Mật khẩu cũ"
-            disabled={isSubmitting}
-          />
-        </div>
+<form className="auth-form" onSubmit={handleChangePassword}>
+  {/* Mật khẩu cũ */}
+  <div className="input-group" style={{ position: 'relative' }}>
+    <span className="icon">🗝️</span>
+    <input
+      type={showOldPassword ? 'text' : 'password'}
+      placeholder="Mật khẩu cũ"
+      value={oldPassword}
+      onChange={(e) => setOldPassword(e.target.value)}
+      aria-label="Mật khẩu cũ"
+      disabled={isSubmitting}
+      style={{ paddingRight: oldPassword ? '40px' : '14px' }} // thu nhỏ padding nếu không có nút
+    />
+    {oldPassword && (
+      <button
+        type="button"
+        onClick={() => setShowOldPassword(!showOldPassword)}
+        aria-label={showOldPassword ? 'Ẩn mật khẩu cũ' : 'Hiện mật khẩu cũ'}
+        style={{
+          position: 'absolute',
+          right: '12px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          background: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          fontSize: '1.2em',
+          color: '#666',
+          zIndex: 1,
+        }}
+      >
+        {showOldPassword ? '🙈' : '👁️'}
+      </button>
+    )}
+  </div>
 
-        <div className="input-group">
-          <span className="icon">🔒</span>
-          <input
-            type="password"
-            placeholder="Mật khẩu mới"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            aria-label="Mật khẩu mới"
-            disabled={isSubmitting}
-          />
-        </div>
+  {/* Mật khẩu mới */}
+  <div className="input-group" style={{ position: 'relative' }}>
+    <span className="icon">🔒</span>
+    <input
+      type={showNewPassword ? 'text' : 'password'}
+      placeholder="Mật khẩu mới"
+      value={newPassword}
+      onChange={(e) => setNewPassword(e.target.value)}
+      aria-label="Mật khẩu mới"
+      disabled={isSubmitting}
+      style={{ paddingRight: newPassword ? '40px' : '14px' }}
+    />
+    {newPassword && (
+      <button
+        type="button"
+        onClick={() => setShowNewPassword(!showNewPassword)}
+        aria-label={showNewPassword ? 'Ẩn mật khẩu mới' : 'Hiện mật khẩu mới'}
+        style={{
+          position: 'absolute',
+          right: '12px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          background: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          fontSize: '1.2em',
+          color: '#666',
+          zIndex: 1,
+        }}
+      >
+        {showNewPassword ? '🙈' : '👁️'}
+      </button>
+    )}
+  </div>
 
-        <div className="input-group">
-          <span className="icon">✅</span>
-          <input
-            type="password"
-            placeholder="Xác nhận mật khẩu mới"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            aria-label="Xác nhận mật khẩu mới"
-            disabled={isSubmitting}
-          />
-        </div>
+  {/* Xác nhận mật khẩu mới */}
+  <div className="input-group" style={{ position: 'relative' }}>
+    <span className="icon">✅</span>
+    <input
+      type={showConfirmPassword ? 'text' : 'password'}
+      placeholder="Xác nhận mật khẩu mới"
+      value={confirmPassword}
+      onChange={(e) => setConfirmPassword(e.target.value)}
+      aria-label="Xác nhận mật khẩu mới"
+      disabled={isSubmitting}
+      style={{ paddingRight: confirmPassword ? '40px' : '14px' }}
+    />
+    {confirmPassword && (
+      <button
+        type="button"
+        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+        aria-label={showConfirmPassword ? 'Ẩn xác nhận mật khẩu' : 'Hiện xác nhận mật khẩu'}
+        style={{
+          position: 'absolute',
+          right: '12px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          background: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          fontSize: '1.2em',
+          color: '#666',
+          zIndex: 1,
+        }}
+      >
+        {showConfirmPassword ? '🙈' : '👁️'}
+      </button>
+    )}
+  </div>
 
-        <button type="submit" className="auth-button" disabled={isSubmitting}>
-          {isSubmitting ? 'Đang đổi...' : 'ĐỔI MẬT KHẨU'}
-        </button>
-      </form>
+  <button type="submit" className="auth-button" disabled={isSubmitting}>
+    {isSubmitting ? 'Đang đổi...' : 'ĐỔI MẬT KHẨU'}
+  </button>
+</form>
 
       <div className="auth-links">
         <button className="link-button" onClick={() => navigate(-1)}>

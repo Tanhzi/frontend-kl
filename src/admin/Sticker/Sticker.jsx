@@ -9,7 +9,7 @@ const Sticker = () => {
     return saved ? JSON.parse(saved) : null;
   };
   const [auth] = useState(getAuth());
-  const { id: id_admin, username: adminName } = auth || {};
+  const { id_admin, username: adminName } = auth || {};
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [stickers, setStickers] = useState([]);

@@ -9,7 +9,7 @@ const FrameAD = () => {
       return saved ? JSON.parse(saved) : null;
   };
   const [auth, setAuth] = useState(getAuth());
-  const { id: id_admin, username: adminName } = auth || {};
+  const {id_admin, username: adminName } = auth || {};
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [frames, setFrames] = useState([]);
   const [events, setEvents] = useState([]);

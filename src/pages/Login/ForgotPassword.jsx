@@ -9,15 +9,20 @@ function ForgotPassword() {
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+
+  // 👇 Thêm trạng thái cho ẩn/hiện mật khẩu
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const navigate = useNavigate();
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
-  // ✅ Kiểm tra trạng thái đăng nhập
+  const navigate = useNavigate();
   const isAuthenticated = !!JSON.parse(localStorage.getItem('auth'));
 
-  // ✅ Tự động điền email nếu đã đăng nhập
   useEffect(() => {
     const auth = JSON.parse(localStorage.getItem('auth'));
     if (auth?.email) {
@@ -29,7 +34,6 @@ function ForgotPassword() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Bước 1: Gửi mã xác nhận
   const handleSendOtp = async (e) => {
     e.preventDefault();
     setMessage('');
@@ -39,7 +43,7 @@ function ForgotPassword() {
       return;
     }
 
-    setIsSubmitting(true);
+    setIsSendingOtp(true);
 
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/forgot-password`, {
@@ -60,11 +64,36 @@ function ForgotPassword() {
       console.error('Lỗi gửi mã:', error);
       setMessage('Có lỗi xảy ra. Vui lòng thử lại sau.');
     } finally {
-      setIsSubmitting(false);
+      setIsSendingOtp(false);
     }
   };
 
-  // Bước 2: Xác minh OTP
+  const resendOtp = async () => {
+    setMessage('');
+    setIsSendingOtp(true);
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (data.status === 'success') {
+        setMessage('Mã xác nhận mới đã được gửi đến email của bạn.');
+      } else {
+        setMessage(data.message || 'Gửi lại thất bại. Vui lòng thử lại.');
+      }
+    } catch (error) {
+      console.error('Lỗi gửi lại mã:', error);
+      setMessage('Có lỗi xảy ra. Vui lòng thử lại sau.');
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     setMessage('');
@@ -74,7 +103,7 @@ function ForgotPassword() {
       return;
     }
 
-    setIsSubmitting(true);
+    setIsVerifyingOtp(true);
 
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/verify-otp`, {
@@ -86,9 +115,8 @@ function ForgotPassword() {
       const data = await response.json();
 
       if (data.status === 'success') {
-        setMessage('Mã xác nhận hợp lệ. Vui lòng nhập mật khẩu mới.');
+        setMessage('');
         setStep(3);
-        setMessage(''); // Xoá message trước khi sang bước 3
       } else {
         setMessage(data.message || 'Mã xác nhận không hợp lệ hoặc đã hết hạn.');
       }
@@ -96,11 +124,10 @@ function ForgotPassword() {
       console.error('Lỗi xác minh OTP:', error);
       setMessage('Có lỗi xảy ra. Vui lòng thử lại sau.');
     } finally {
-      setIsSubmitting(false);
+      setIsVerifyingOtp(false);
     }
   };
 
-  // Bước 3: Đặt lại mật khẩu
   const handleResetPassword = async (e) => {
     e.preventDefault();
     setMessage('');
@@ -114,7 +141,7 @@ function ForgotPassword() {
       return;
     }
 
-    setIsSubmitting(true);
+    setIsResettingPassword(true);
 
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/reset-password`, {
@@ -132,7 +159,7 @@ function ForgotPassword() {
 
       if (data.status === 'success') {
         setMessage('Đổi mật khẩu thành công! Đang chuyển hướng...');
-        setTimeout(() => navigate('/'), 1000);
+        setTimeout(() => navigate('/'), 500);
       } else {
         setMessage(data.message || 'Đổi mật khẩu thất bại. Vui lòng thử lại.');
       }
@@ -140,7 +167,7 @@ function ForgotPassword() {
       console.error('Lỗi đặt lại mật khẩu:', error);
       setMessage('Có lỗi xảy ra. Vui lòng thử lại sau.');
     } finally {
-      setIsSubmitting(false);
+      setIsResettingPassword(false);
     }
   };
 
@@ -179,12 +206,16 @@ function ForgotPassword() {
               value={email}
               onChange={(e) => !isEmailLocked && setEmail(e.target.value)}
               aria-label="Email"
-              disabled={isSubmitting}
+              disabled={isSendingOtp}
               readOnly={isEmailLocked}
             />
           </div>
-          <button type="submit" className="auth-button" disabled={isSubmitting || !email}>
-            {isSubmitting ? 'Đang gửi...' : 'GỬI MÃ XÁC NHẬN'}
+          <button
+            type="submit"
+            className="auth-button"
+            disabled={isSendingOtp || !email}
+          >
+            {isSendingOtp ? 'Đang gửi...' : 'GỬI MÃ XÁC NHẬN'}
           </button>
         </form>
       )}
@@ -201,54 +232,111 @@ function ForgotPassword() {
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
               aria-label="Mã xác nhận"
               maxLength={6}
-              disabled={isSubmitting}
+              disabled={isVerifyingOtp || isSendingOtp}
             />
           </div>
-          <button type="submit" className="auth-button" disabled={isSubmitting}>
-            {isSubmitting ? 'Đang xác minh...' : 'XÁC NHẬN MÃ'}
+          <button
+            type="submit"
+            className="auth-button"
+            disabled={isVerifyingOtp}
+          >
+            {isVerifyingOtp ? 'Đang xác minh...' : 'XÁC NHẬN MÃ'}
           </button>
           <button
             type="button"
             className="link-button"
-            onClick={() => setStep(1)}
+            onClick={resendOtp}
+            disabled={isSendingOtp}
             style={{ marginTop: '12px', fontSize: '15px', fontWeight: '500' }}
           >
-            ← Gửi lại mã
+            {isSendingOtp ? 'Đang gửi lại...' : '← Gửi lại mã'}
           </button>
         </form>
       )}
 
+      {/* BƯỚC 3: ĐẶT LẠI MẬT KHẨU — CẬP NHẬT Ở ĐÂY */}
       {step === 3 && (
         <form className="auth-form" onSubmit={handleResetPassword}>
-          <div className="input-group">
+          {/* Mật khẩu mới */}
+          <div className="input-group" style={{ position: 'relative' }}>
             <span className="icon">🔒</span>
             <input
-              type="password"
+              type={showNewPassword ? 'text' : 'password'}
               placeholder="Mật khẩu mới"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               aria-label="Mật khẩu mới"
-              disabled={isSubmitting}
+              disabled={isResettingPassword}
+              style={{ paddingRight: newPassword ? '40px' : '14px' }}
             />
+            {newPassword && (
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                aria-label={showNewPassword ? 'Ẩn mật khẩu mới' : 'Hiện mật khẩu mới'}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '1.2em',
+                  color: '#666',
+                  zIndex: 1,
+                }}
+              >
+                {showNewPassword ? '🙈' : '👁️'}
+              </button>
+            )}
           </div>
-          <div className="input-group">
+
+          {/* Xác nhận mật khẩu */}
+          <div className="input-group" style={{ position: 'relative' }}>
             <span className="icon">✅</span>
             <input
-              type="password"
+              type={showConfirmPassword ? 'text' : 'password'}
               placeholder="Xác nhận mật khẩu"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               aria-label="Xác nhận mật khẩu"
-              disabled={isSubmitting}
+              disabled={isResettingPassword}
+              style={{ paddingRight: confirmPassword ? '40px' : '14px' }}
             />
+            {confirmPassword && (
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                aria-label={showConfirmPassword ? 'Ẩn xác nhận mật khẩu' : 'Hiện xác nhận mật khẩu'}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '1.2em',
+                  color: '#666',
+                  zIndex: 1,
+                }}
+              >
+                {showConfirmPassword ? '🙈' : '👁️'}
+              </button>
+            )}
           </div>
-          <button type="submit" className="auth-button" disabled={isSubmitting}>
-            {isSubmitting ? 'Đang đổi...' : 'ĐẶT MẬT KHẨU MỚI'}
+
+          <button
+            type="submit"
+            className="auth-button"
+            disabled={isResettingPassword}
+          >
+            {isResettingPassword ? 'Đang đổi...' : 'ĐẶT MẬT KHẨU MỚI'}
           </button>
         </form>
       )}
 
-      {/* ✅ NÚT QUAY LẠI – THAY ĐỔI TEXT THEO TRẠNG THÁI ĐĂNG NHẬP */}
       <div className="auth-links">
         <button className="link-button" onClick={() => navigate(-1)}>
           {isAuthenticated ? '← Quay lại' : '← Quay lại đăng nhập'}

@@ -1,4 +1,3 @@
-// src/components/Chatbot.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import Lottie from 'lottie-react';
 import './Chatbot.css';
@@ -19,10 +18,11 @@ const Chatbot = () => {
   const quickReplies = [
     { icon: '👋', text: 'Xin chào', message: 'Xin chào! Bạn có thể giới thiệu về SweetLens không?' },
     { icon: '📍', text: 'Địa chỉ', message: 'Địa chỉ của SweetLens ở đâu?' },
-    { icon: '📸', text: 'Chụp ảnh', message: 'Tôi muốn biết về dịch vụ chụp ảnh' },
+    // { icon: '📸', text: 'Chụp ảnh', message: 'Tôi muốn biết về dịch vụ chụp ảnh' },
+    { icon: '🎉', text: 'Sự kiện', message: 'Bên mình hiện có sự kiện gì không?' },
     { icon: '💰', text: 'Bảng giá', message: 'Bảng giá dịch vụ của SweetLens' },
     { icon: '🕐', text: 'Giờ mở cửa', message: 'SweetLens mở cửa lúc mấy giờ?' },
-    { icon: '📞', text: 'Liên hệ', message: 'Số điện thoại liên hệ của SweetLens' },
+    { icon: '📞', text: 'Liên hệ', message: 'Liên hệ với SweetLens bằng cách nào?' },
   ];
 
   useEffect(() => {
@@ -32,15 +32,6 @@ const Chatbot = () => {
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 100);
-    }
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (isOpen) {
-      const timer = setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
-      return () => clearTimeout(timer);
     }
   }, [isOpen]);
 
@@ -57,45 +48,30 @@ const Chatbot = () => {
       const transcript = event.results[0][0].transcript;
       setInputMessage(transcript);
       setIsListening(false);
-      
+
       if (listeningTimeoutRef.current) {
         clearTimeout(listeningTimeoutRef.current);
         listeningTimeoutRef.current = null;
       }
     };
 
-// Trong useEffect setup recognition
-recognition.onerror = (event) => {
-  console.error('Lỗi nhận diện giọng nói:', event.error);
-  setIsListening(false);
-  setInputMessage('');
+    recognition.onerror = (event) => {
+      console.error('Lỗi nhận diện giọng nói:', event.error);
+      setIsListening(false);
+      setInputMessage('');
 
-  if (listeningTimeoutRef.current) {
-    clearTimeout(listeningTimeoutRef.current);
-    listeningTimeoutRef.current = null;
-  }
+      if (listeningTimeoutRef.current) {
+        clearTimeout(listeningTimeoutRef.current);
+        listeningTimeoutRef.current = null;
+      }
 
-  // ❌ KHÔNG gửi tin nhắn ở đây nữa
-  // Chỉ xử lý lỗi khác (không phải 'no-speech')
-  if (event.error !== 'no-speech') {
-    alert('❌ Không thể nhận diện giọng nói.');
-  }
-  // → Tin nhắn "không nghe rõ" sẽ chỉ được gửi từ setTimeout
-};
-
-recognition.onend = () => {
-  // Dừng lắng nghe
-  setIsListening(false);
-  if (listeningTimeoutRef.current) {
-    clearTimeout(listeningTimeoutRef.current);
-    listeningTimeoutRef.current = null;
-  }
-  // → Không gửi tin nhắn ở đây
-};
+      if (event.error !== 'no-speech') {
+        alert('❌ Không thể nhận diện giọng nói.');
+      }
+    };
 
     recognition.onend = () => {
       setIsListening(false);
-      
       if (listeningTimeoutRef.current) {
         clearTimeout(listeningTimeoutRef.current);
         listeningTimeoutRef.current = null;
@@ -121,10 +97,11 @@ recognition.onend = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/chat`, {
+      // ✅ Gửi đúng field "question"
+      const response = await fetch(`http://localhost:5001/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: messageText }),
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ question: messageText }), // 👈 SỬA TẠI ĐÂY
       });
 
       const text = await response.text();
@@ -132,13 +109,14 @@ recognition.onend = () => {
       try {
         data = JSON.parse(text);
       } catch (e) {
-        throw new Error('Máy chủ không phản hồi đúng định dạng.');
+        throw new Error('Máy chủ không phản hồi đúng định dạng JSON.');
       }
 
-      if (response.ok && data.reply) {
-        setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
+      // ✅ Backend trả về { "answer": "...", "time": ... }
+      if (response.ok && data.answer !== undefined) {
+        setMessages((prev) => [...prev, { role: 'assistant', content: data.answer }]);
       } else {
-        throw new Error(data.error || 'AI hiện không hoạt động.');
+        throw new Error(data.error || 'AI hiện không trả lời được.');
       }
     } catch (err) {
       console.error('Lỗi khi gọi chatbot:', err);
@@ -155,33 +133,29 @@ recognition.onend = () => {
     handleSendMessage(message);
   };
 
-const toggleListening = () => {
-  if (!recognitionRef.current) {
-    alert('Tính năng này chỉ hoạt động trên Chrome hoặc Edge.');
-    return;
-  }
+  const toggleListening = () => {
+    if (!recognitionRef.current) {
+      alert('Tính năng này chỉ hoạt động trên Chrome hoặc Edge.');
+      return;
+    }
 
-  if (isListening) {
-    recognitionRef.current.stop();
-    setIsListening(false);
-    // KHÔNG setInputMessage('') ở đây nếu bạn muốn giữ lại nội dung cũ
-    // Nhưng nếu muốn xóa khi dừng → giữ nguyên
-  } else {
-    // 👇 KHÔNG gán giá trị vào inputMessage
-    // setInputMessage('... đang nghe ...'); ← XOÁ DÒNG NÀY
-    setIsListening(true);
-    recognitionRef.current.start();
-
-    listeningTimeoutRef.current = setTimeout(() => {
-      listeningTimeoutRef.current = null;
+    if (isListening) {
+      recognitionRef.current.stop();
       setIsListening(false);
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: 'Bạn có thể nói lại được không, mình không nghe rõ.' }
-      ]);
-    }, 5000);
-  }
-};
+    } else {
+      setIsListening(true);
+      recognitionRef.current.start();
+
+      listeningTimeoutRef.current = setTimeout(() => {
+        listeningTimeoutRef.current = null;
+        setIsListening(false);
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: 'Bạn có thể nói lại được không, mình không nghe rõ.' }
+        ]);
+      }, 5000);
+    }
+  };
 
   const handleClear = () => {
     setInputMessage('');
@@ -194,7 +168,7 @@ const toggleListening = () => {
       recognitionRef.current.stop();
       setIsListening(false);
       setInputMessage('');
-      
+
       if (listeningTimeoutRef.current) {
         clearTimeout(listeningTimeoutRef.current);
         listeningTimeoutRef.current = null;
@@ -244,7 +218,7 @@ const toggleListening = () => {
               ) : (
                 '💬'
               )}
-              <span className='h3'>Trợ lý SweetLens AI</span>
+              <span className="h3">Trợ lý SweetLens AI</span>
               <button className="chat-close" onClick={handleClose}>×</button>
             </div>
             <div className="chat-messages">
@@ -283,21 +257,21 @@ const toggleListening = () => {
               <div ref={messagesEndRef} />
             </div>
             <div className="chat-input-area">
-<input
-  ref={inputRef}
-  type="text"
-  value={inputMessage}
-  onChange={(e) => setInputMessage(e.target.value)}
-  onKeyPress={(e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  }}
-  placeholder={isListening ? '... đang nghe ...' : 'Nói câu hỏi...'}
-  disabled={isLoading || isListening}
-  className="chat-input"
-/>
+              <input
+                ref={inputRef}
+                type="text"
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
+                placeholder={isListening ? '... đang nghe ...' : 'Nói câu hỏi...'}
+                disabled={isLoading || isListening}
+                className="chat-input"
+              />
               <button
                 onClick={handleClear}
                 disabled={isLoading || !inputMessage || isListening}
@@ -321,7 +295,7 @@ const toggleListening = () => {
                 className={`voice-toggle-btn ${isListening ? 'active' : ''}`}
                 onClick={toggleListening}
                 disabled={isLoading}
-                title={isListening ? "Nhấn để dừng nói" : "Nhấn để nói (tiếng Việt)"}
+                title={isListening ? 'Nhấn để dừng nói' : 'Nhấn để nói (tiếng Việt)'}
               >
                 {isListening ? '🛑 Dừng' : '🎤 Nói'}
               </button>

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"vite\" \"npm run server\" \"npm run electron:dev\"",
+    "dev": "concurrently \"vite\" \"npm run electron:dev\"",
     "server": "node server.js",
     "electron:dev": "wait-on http://localhost:3000 && electron .",
     "build": "vite build",

@@ -1,0 +1,120 @@
+.faceswap-section {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 15px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin-top: 20px;
+  max-height: 300px;
+  display: flex;
+  flex-direction: column;
+}
+
+.faceswap-header {
+  margin-bottom: 15px;
+}
+
+.faceswap-categories {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 5px;
+  scrollbar-width: thin;
+}
+
+.category-btn {
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: 1px solid #ddd;
+  background: #f8f9fa;
+  font-size: 14px;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.category-btn.active {
+  background: #be185d;
+  color: white;
+  border-color: #be185d;
+}
+
+.faceswap-grid-container {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 200px;
+}
+
+.faceswap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 12px;
+  padding: 5px;
+}
+
+.faceswap-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.faceswap-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.faceswap-item.selected {
+  border-color: #be185d;
+  box-shadow: 0 0 0 2px rgba(190, 24, 93, 0.3);
+}
+
+.faceswap-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.faceswap-item .item-name {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  font-size: 10px;
+  padding: 4px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.faceswap-item.no-effect {
+  background: #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+}
+
+.no-effect-icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+
+.processing-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}

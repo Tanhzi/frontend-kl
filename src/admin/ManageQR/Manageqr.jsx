@@ -61,7 +61,7 @@ const Manageqr = () => {
     return saved ? JSON.parse(saved) : null;
   };
   const [auth, setAuth] = useState(getAuth());
-  const { id: id_admin, username } = auth || {};
+  const { id_admin, username, } = auth || {};
 
   // === UI State ===
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);

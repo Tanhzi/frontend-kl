@@ -9,7 +9,7 @@ const AiTopic = () => {
   };
 
   const [auth] = useState(getAuth());
-  const { id: id_admin, username: adminName } = auth || {};
+  const { id_admin, username: adminName } = auth || {};
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [topics, setTopics] = useState([]);

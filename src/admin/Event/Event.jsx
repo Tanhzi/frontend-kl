@@ -76,27 +76,30 @@ const Event = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Lấy dữ liệu ghi chú từ Laravel API
-    useEffect(() => {
-        if (!id_admin) return;
-        fetch(`${API_URL}/event-notes?id_admin=${id_admin}`)
-            .then(res => res.json())
-            .then(data => {
-                if (Array.isArray(data)) {
-                    setNotes(data);
-                } else if (data.status === "error") {
-                    console.error("Error fetching notes:", data.message);
-                }
-            })
-            .catch(error => console.error("Error fetching notes:", error));
-    }, [id_admin]);
 
-    useEffect(() => {
-        if (id_admin) {
-            refreshEvents();
-            refreshUsers();
-        }
-    }, [id_admin]);
+// Lấy dữ liệu ghi chú từ Laravel API
+const refreshNote = () => {
+    if (!id_admin) return;
+    fetch(`${API_URL}/event-notes?id_admin=${id_admin}`)
+        .then(res => res.json())
+        .then(data => {
+            if (Array.isArray(data)) {
+                setNotes(data);
+            } else if (data.status === "error") {
+                console.error("Error fetching notes:", data.message);
+            }
+        })
+        .catch(error => console.error("Error fetching notes:", error));
+};
+
+// Sử dụng useEffect để gọi refreshNote khi cần
+useEffect(() => {
+    if (id_admin) {
+        refreshEvents();
+        refreshUsers();
+        refreshNote();
+    }
+}, [id_admin]);
 
 const refreshEvents = () => {
     fetch(`${API_URL}/events-admin?id_admin=${id_admin}`)
@@ -165,10 +168,12 @@ const refreshEvents = () => {
                 if (data.status === "success") {
                     alert("Ghi chú đã được cập nhật thành công!");
                     setShowTextForm(false);
+                    refreshNote();
                 } else {
                     alert("Lỗi: " + data.message);
                 }
             })
+            
             .catch((error) => {
                 console.error("Error updating note:", error);
                 alert("Có lỗi khi cập nhật ghi chú.");
@@ -301,58 +306,60 @@ fetch(`${API_URL}/events-admin?id_admin=${id_admin}`, {
             });
     };
 
-    const handleSaveEvent = () => {
-        if (!eventName || !eventDate || !eventIdToEdit) return;
+const handleSaveEvent = () => {
+    if (!eventName || !eventDate || !eventIdToEdit) return;
 
-        const payload = {
-            name: eventName,
-            date: eventDate,
-            apply: selectedUsers
-        };
-
-        fetch(`${API_URL}/events-admin/${eventIdToEdit}?id_admin=${id_admin}`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            },
-            body: JSON.stringify(payload)
-        })
-            .then(res => res.json())
-            .then(async data => {
-                if (data.status !== "success") {
-                    alert("Lỗi: " + data.message);
-                    return;
-                }
-
-                if (selectedUsers.length > 0) {
-                    try {
-                        await Promise.all(
-                            selectedUsers.map(userId => {
-                                return fetch(
-                                    `${API_URL}/users-admin/${userId}?id_admin=${id_admin}`,
-                                    {
-                                        method: "POST",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({ id_topic: eventIdToEdit })
-                                    }
-                                ).then(r => r.json());
-                            })
-                        );
-                    } catch (err) {
-                        console.error("Lỗi cập nhật users:", err);
-                    }
-                }
-
-                refreshEvents();
-                refreshUsers();
-                setShowAddForm(false);
-            })
-            .catch(err => {
-                console.error("Error updating event:", err);
-                alert("Có lỗi khi cập nhật sự kiện.");
-            });
+    const payload = {
+        name: eventName,
+        date: eventDate,
+        apply: selectedUsers
     };
+
+    fetch(`${API_URL}/events-admin/${eventIdToEdit}?id_admin=${id_admin}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        },
+        body: JSON.stringify(payload)
+    })
+        .then(res => res.json())
+        .then(async data => {
+            if (data.status !== "success") {
+                alert("Lỗi: " + data.message);
+                return;
+            }
+
+            if (selectedUsers.length > 0) {
+                try {
+                    await Promise.all(
+                        selectedUsers.map(userId => {
+                            return fetch(
+                                `${API_URL}/users-admin/${userId}?id_admin=${id_admin}`,
+                                {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ id_topic: eventIdToEdit })
+                                }
+                            ).then(r => r.json());
+                        })
+                    );
+                } catch (err) {
+                    console.error("Lỗi cập nhật users:", err);
+                }
+            }
+
+            // Thêm thông báo thành công ở đây
+            alert("Cập nhật sự kiện thành công!");
+            refreshEvents();
+            refreshUsers();
+            setShowAddForm(false);
+        })
+        .catch(err => {
+            console.error("Error updating event:", err);
+            alert("Có lỗi khi cập nhật sự kiện.");
+        });
+};
 
     const handleDeleteEvent = (id) => {
         if (!window.confirm("Bạn có chắc chắn muốn xóa sự kiện này không?")) return;

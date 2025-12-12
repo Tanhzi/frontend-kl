@@ -5,6 +5,7 @@ import './FilterSection.css';
 const FilterSection = ({ filters, appliedFilters, selectedImageIndex, onApplyFilter }) => {
   return (
     <div className="filters-container mb-3">
+      <h4 className="mb-3 text-center">Chọn bộ lọc</h4>
       {Array.from({ length: Math.ceil(filters.length / 3) }).map((_, rowIndex) => {
         const startIndex = rowIndex * 3;
         const rowFilters = filters.slice(startIndex, startIndex + 3);

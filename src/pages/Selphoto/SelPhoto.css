@@ -361,3 +361,39 @@ h4 {
 .selected-image-preview > div {
   position: relative;
 }
+
+
+/* ======== LOADING OVERLAY (FIX FLICKERING) ======== */
+.global-loading-overlay {
+  position: fixed;      /* Phủ toàn màn hình, không phụ thuộc cha */
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.6); /* Nền tối bán trong suốt */
+  backdrop-filter: blur(5px);           /* Làm mờ hậu cảnh */
+  z-index: 9999;        /* Đảm bảo nằm trên tất cả mọi thứ */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  
+  /* QUAN TRỌNG: Chặn tất cả tương tác chuột xuống bên dưới */
+  pointer-events: all;  
+  cursor: wait;         /* Đổi con trỏ chuột thành icon chờ */
+}
+
+.loading-content {
+  text-align: center;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 30px 50px;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.2);
+  animation: popIn 0.3s ease-out;
+}
+
+@keyframes popIn {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+

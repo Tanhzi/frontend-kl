@@ -1,3 +1,21 @@
+/* Ẩn nút "mắt" mặc định trên Chrome, Edge, Safari */
+input::-webkit-credentials-auto-fill-button,
+input::-webkit-caps-lock-indicator,
+input::-webkit-contacts-auto-fill-button {
+  display: none !important;
+}
+
+/* Ẩn nút "hiện mật khẩu" mặc định trên Microsoft Edge / IE */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+
+/* Đảm bảo không có icon nào khác can thiệp */
+input[type="password"] {
+  -webkit-text-security: disc !important;
+}
+
 .auth-container,
 .login-container,
 .register-container {

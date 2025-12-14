@@ -514,3 +514,10 @@
         gap: 12px;
     }
 }
+
+
+.badge {
+  font-size: 14px;   /* tăng kích thước chữ */
+  color: #000;       /* chữ màu đen */
+  font-weight: normal;   /* bỏ chữ đậm */
+}

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { FaPlus, FaEdit, FaTrash, FaUpload, FaFileAlt, FaChevronDown } from "react-icons/fa";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { FaPlus, FaUpload, FaFileAlt } from "react-icons/fa";
 import Navbar from '../../components/Navbar';
 import "./Event.css";
 
@@ -36,7 +36,7 @@ const Event = () => {
     const [logoApplyOption, setLogoApplyOption] = useState("home");
     const [logoFile, setLogoFile] = useState(null);
 
-    const [noteApply, setNoteApply] = useState("cancel"); // Mặc định là "cancel"
+    const [noteApply, setNoteApply] = useState("cancel");
 
     const [showAddForm, setShowAddForm] = useState(false);
     const [showUploadForm, setShowUploadForm] = useState(false);
@@ -46,60 +46,86 @@ const Event = () => {
     const [eventDate, setEventDate] = useState("");
     const [eventIdToEdit, setEventIdToEdit] = useState(null);
     const [showLogoUploadForm, setShowLogoUploadForm] = useState(false);
-    const [filterOption, setFilterOption] = useState("none");
-    // === Thêm state phân trang ===
+    const [filterOption, setFilterOption] = useState("all");
+    
+    // === State phân trang ===
     const [currentPage, setCurrentPage] = useState(1);
-    const ITEMS_PER_PAGE = 5;
+    const ITEMS_PER_PAGE = 10;
 
     const [users, setUsers] = useState([]);
     const [selectedUsers, setSelectedUsers] = useState([]);
 
-    // Lấy dữ liệu ghi chú từ Laravel API
-    useEffect(() => {
-        if (!id_admin) return;
-        fetch(`${import.meta.env.VITE_API_BASE_URL}/event-notes?id_admin=${id_admin}`)
-            .then(res => res.json())
-            .then(data => {
-                if (Array.isArray(data)) {
-                    setNotes(data);
-                } else if (data.status === "error") {
-                    console.error("Error fetching notes:", data.message);
-                }
-            })
-            .catch(error => console.error("Error fetching notes:", error));
-    }, [id_admin]);
+    // === XÓA HÀNG LOẠT ===
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [selectAllGlobal, setSelectAllGlobal] = useState(false);
 
-    useEffect(() => {
-        if (id_admin) {
-            refreshEvents();
-            refreshUsers();
-        }
-    }, [id_admin]);
+    const filterRef = useRef(null);
+    const [showFilterMenu, setShowFilterMenu] = useState(false);
 
-    const refreshEvents = () => {
-        fetch(`${import.meta.env.VITE_API_BASE_URL}/events-admin?id_admin=${id_admin}`)
-            .then((res) => res.json())
-            .then((data) => {
-                // 👇 Kiểm tra cấu trúc phản hồi từ API
-                if (Array.isArray(data)) {
-                    setEvents(data);
-                } else if (data && Array.isArray(data.data)) {
-                    // Nếu API trả về { data: [...] }
-                    setEvents(data.data);
-                } else {
-                    // Nếu không phải mảng, gán mảng rỗng và log cảnh báo
-                    console.warn("Unexpected events API response:", data);
-                    setEvents([]);
-                }
-            })
-            .catch((error) => {
-                console.error("Error fetching events:", error);
-                setEvents([]); // fallback an toàn
-            });
-    };
+    const API_URL = import.meta.env.VITE_API_BASE_URL;
+
+    // Đóng menu khi click bên ngoài
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (filterRef.current && !filterRef.current.contains(event.target)) {
+                setShowFilterMenu(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+
+// Lấy dữ liệu ghi chú từ Laravel API
+const refreshNote = () => {
+    if (!id_admin) return;
+    fetch(`${API_URL}/event-notes?id_admin=${id_admin}`)
+        .then(res => res.json())
+        .then(data => {
+            if (Array.isArray(data)) {
+                setNotes(data);
+            } else if (data.status === "error") {
+                console.error("Error fetching notes:", data.message);
+            }
+        })
+        .catch(error => console.error("Error fetching notes:", error));
+};
+
+// Sử dụng useEffect để gọi refreshNote khi cần
+useEffect(() => {
+    if (id_admin) {
+        refreshEvents();
+        refreshUsers();
+        refreshNote();
+    }
+}, [id_admin]);
+
+const refreshEvents = () => {
+    fetch(`${API_URL}/events-admin?id_admin=${id_admin}`)
+        .then((res) => res.json())
+        .then((data) => {
+            let eventsData = [];
+            if (Array.isArray(data)) {
+                eventsData = data;
+            } else if (data && Array.isArray(data.data)) {
+                eventsData = data.data;
+            } else {
+                console.warn("Unexpected events API response:", data);
+            }
+
+            // ✅ SẮP XẾP THEO `id` TĂNG DẦN  (2 sắp xếp theo id)
+            const sortedEvents = eventsData.sort((a, b) => a.id - b.id);
+            setEvents(sortedEvents);
+        })
+        .catch((error) => {
+            console.error("Error fetching events:", error);
+            setEvents([]);
+        });
+};
 
     const refreshUsers = () => {
-        fetch(`${import.meta.env.VITE_API_BASE_URL}/users-admin?id_admin=${id_admin}`)
+        fetch(`${API_URL}/users-admin?id_admin=${id_admin}`)
             .then((res) => res.json())
             .then((data) => {
                 if (Array.isArray(data)) {
@@ -130,7 +156,7 @@ const Event = () => {
         noteFormData.append("note3", currentNote.note3);
         noteFormData.append("ev_note", noteApply);
 
-        fetch(`${import.meta.env.VITE_API_BASE_URL}/events-admin/${currentNote.id}/note?id_admin=${id_admin}`, {
+        fetch(`${API_URL}/events-admin/${currentNote.id}/note?id_admin=${id_admin}`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/x-www-form-urlencoded"
@@ -142,10 +168,12 @@ const Event = () => {
                 if (data.status === "success") {
                     alert("Ghi chú đã được cập nhật thành công!");
                     setShowTextForm(false);
+                    refreshNote();
                 } else {
                     alert("Lỗi: " + data.message);
                 }
             })
+            
             .catch((error) => {
                 console.error("Error updating note:", error);
                 alert("Có lỗi khi cập nhật ghi chú.");
@@ -153,21 +181,44 @@ const Event = () => {
     };
 
     // Hàm tải ảnh logo
-    const handleSaveLogoImage = () => {
-        if (!selectedEvent) {
-            alert("Không có sự kiện được chọn!");
-            return;
-        }
-        // if (!logoFile) {
-        //     alert("Vui lòng chọn logo!");
-        //     return;
-        // }
+const handleSaveLogoImage = () => {
+    if (!selectedEvent) {
+        alert("Không có sự kiện được chọn!");
+        return;
+    }
 
+    // Nếu KHÔNG có file mới, chỉ cập nhật `apply`
+    if (!logoFile) {
+        const formData = new URLSearchParams();
+        formData.append("apply", logoApplyOption);
+
+        fetch(`${API_URL}/events-admin/${selectedEvent.id}/logo?id_admin=${id_admin}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: formData.toString()
+        })
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.status === "success") {
+                    alert("Cập nhật tùy chọn logo thành công!");
+                    refreshEvents();
+                } else {
+                    alert("Lỗi: " + data.message);
+                }
+            })
+            .catch((error) => {
+                console.error("Error updating logo apply:", error);
+                alert("Có lỗi khi cập nhật tùy chọn.");
+            });
+    } else {
+        // Có file mới → upload cả file và apply
         const formData = new FormData();
         formData.append("logo", logoFile);
         formData.append("apply", logoApplyOption);
 
-        fetch(`${import.meta.env.VITE_API_BASE_URL}/events-admin/${selectedEvent.id}/logo?id_admin=${id_admin}`, {
+        fetch(`${API_URL}/events-admin/${selectedEvent.id}/logo?id_admin=${id_admin}`, {
             method: "POST",
             body: formData
         })
@@ -175,7 +226,7 @@ const Event = () => {
             .then((data) => {
                 if (data.status === "success") {
                     alert("Cập nhật logo thành công!");
-                    refreshEvents(); // ✅ Refresh để cập nhật ev_logo
+                    refreshEvents();
                 } else {
                     alert("Lỗi: " + data.message);
                 }
@@ -184,9 +235,11 @@ const Event = () => {
                 console.error("Error updating logo:", error);
                 alert("Có lỗi khi cập nhật logo.");
             });
+    }
 
-        setShowLogoUploadForm(false);
-    };
+    setShowLogoUploadForm(false);
+    setLogoFile(null); // Reset sau khi lưu
+};
 
     // Hàm tạo event mới
     const handleAddEvent = () => {
@@ -195,21 +248,24 @@ const Event = () => {
             return;
         }
 
-        // Gửi dưới dạng JSON
         const payload = {
             name: eventName,
             date: eventDate,
-            apply: selectedUsers // mảng số nguyên
+            apply: selectedUsers
         };
 
-        fetch(`${import.meta.env.VITE_API_BASE_URL}/events-admin?id_admin=${id_admin}`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            },
-            body: JSON.stringify(payload)
-        })
+// ✅ ĐÚNG: Gửi JSON
+fetch(`${API_URL}/events-admin?id_admin=${id_admin}`, {
+    method: "POST",
+    headers: {
+        "Content-Type": "application/json", // ← QUAN TRỌNG
+    },
+    body: JSON.stringify({
+        name: eventName,
+        date: eventDate,
+        apply: selectedUsers, // [1, 2, 3]
+    })
+})
             .then(res => res.json())
             .then(async data => {
                 if (data.status !== "success") {
@@ -220,13 +276,12 @@ const Event = () => {
                 alert("Tạo mới sự kiện thành công!");
                 const newEventId = data.id;
 
-                // Cập nhật id_topic cho user
                 if (selectedUsers.length > 0) {
                     try {
                         await Promise.all(
                             selectedUsers.map(userId => {
                                 return fetch(
-                                    `${import.meta.env.VITE_API_BASE_URL}/users-admin/${userId}?id_admin=${id_admin}`,
+                                    `${API_URL}/users-admin/${userId}?id_admin=${id_admin}`,
                                     {
                                         method: "POST",
                                         headers: { "Content-Type": "application/json" },
@@ -251,63 +306,65 @@ const Event = () => {
             });
     };
 
-    const handleSaveEvent = () => {
-        if (!eventName || !eventDate || !eventIdToEdit) return;
+const handleSaveEvent = () => {
+    if (!eventName || !eventDate || !eventIdToEdit) return;
 
-        const payload = {
-            name: eventName,
-            date: eventDate,
-            apply: selectedUsers
-        };
-
-        fetch(`${import.meta.env.VITE_API_BASE_URL}/events-admin/${eventIdToEdit}?id_admin=${id_admin}`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            },
-            body: JSON.stringify(payload)
-        })
-            .then(res => res.json())
-            .then(async data => {
-                if (data.status !== "success") {
-                    alert("Lỗi: " + data.message);
-                    return;
-                }
-
-                if (selectedUsers.length > 0) {
-                    try {
-                        await Promise.all(
-                            selectedUsers.map(userId => {
-                                return fetch(
-                                    `${import.meta.env.VITE_API_BASE_URL}/users-admin/${userId}?id_admin=${id_admin}`,
-                                    {
-                                        method: "POST",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({ id_topic: eventIdToEdit })
-                                    }
-                                ).then(r => r.json());
-                            })
-                        );
-                    } catch (err) {
-                        console.error("Lỗi cập nhật users:", err);
-                    }
-                }
-
-                refreshEvents();
-                refreshUsers();
-                setShowAddForm(false);
-            })
-            .catch(err => {
-                console.error("Error updating event:", err);
-                alert("Có lỗi khi cập nhật sự kiện.");
-            });
+    const payload = {
+        name: eventName,
+        date: eventDate,
+        apply: selectedUsers
     };
+
+    fetch(`${API_URL}/events-admin/${eventIdToEdit}?id_admin=${id_admin}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        },
+        body: JSON.stringify(payload)
+    })
+        .then(res => res.json())
+        .then(async data => {
+            if (data.status !== "success") {
+                alert("Lỗi: " + data.message);
+                return;
+            }
+
+            if (selectedUsers.length > 0) {
+                try {
+                    await Promise.all(
+                        selectedUsers.map(userId => {
+                            return fetch(
+                                `${API_URL}/users-admin/${userId}?id_admin=${id_admin}`,
+                                {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ id_topic: eventIdToEdit })
+                                }
+                            ).then(r => r.json());
+                        })
+                    );
+                } catch (err) {
+                    console.error("Lỗi cập nhật users:", err);
+                }
+            }
+
+            // Thêm thông báo thành công ở đây
+            alert("Cập nhật sự kiện thành công!");
+            refreshEvents();
+            refreshUsers();
+            setShowAddForm(false);
+        })
+        .catch(err => {
+            console.error("Error updating event:", err);
+            alert("Có lỗi khi cập nhật sự kiện.");
+        });
+};
 
     const handleDeleteEvent = (id) => {
         if (!window.confirm("Bạn có chắc chắn muốn xóa sự kiện này không?")) return;
 
-        fetch(`${import.meta.env.VITE_API_BASE_URL}/events-admin/${id}?id_admin=${id_admin}`, {
+        fetch(`${API_URL}/events-admin/${id}?id_admin=${id_admin}`, {
             method: "DELETE"
         })
             .then((res) => res.json())
@@ -329,19 +386,6 @@ const Event = () => {
         setCurrentNote({ ...currentNote, [field]: value });
     };
 
-    const handleOpenNoteModal = (eventId) => {
-        const noteObj = notes.find(note => note.id === eventId) || {
-            id: eventId,
-            note1: "",
-            note2: "",
-            note3: ""
-        };
-        setCurrentNote(noteObj);
-        setShowTextForm(true);
-    };
-
-
-
     const handleBackgroundFileChange = (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -349,21 +393,44 @@ const Event = () => {
         }
     };
 
-    const handleSaveBackgroundImage = () => {
-        if (!selectedEvent) {
-            alert("Không có sự kiện được chọn!");
-            return;
-        }
-        // if (!backgroundFile) {
-        //     alert("Vui lòng chọn ảnh!");
-        //     return;
-        // }
+const handleSaveBackgroundImage = () => {
+    if (!selectedEvent) {
+        alert("Không có sự kiện được chọn!");
+        return;
+    }
 
+    // Nếu KHÔNG có file mới, chỉ cập nhật `apply`
+    if (!backgroundFile) {
+        const formData = new URLSearchParams();
+        formData.append("apply", bgApplyOption);
+
+        fetch(`${API_URL}/events-admin/${selectedEvent.id}/background?id_admin=${id_admin}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: formData.toString()
+        })
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.status === "success") {
+                    alert("Cập nhật tùy chọn ảnh nền thành công!");
+                    refreshEvents();
+                } else {
+                    alert("Lỗi: " + data.message);
+                }
+            })
+            .catch((error) => {
+                console.error("Error updating background apply:", error);
+                alert("Có lỗi khi cập nhật tùy chọn.");
+            });
+    } else {
+        // Có file mới → upload cả file và apply
         const formData = new FormData();
         formData.append("background", backgroundFile);
         formData.append("apply", bgApplyOption);
 
-        fetch(`${import.meta.env.VITE_API_BASE_URL}/events-admin/${selectedEvent.id}/background?id_admin=${id_admin}`, {
+        fetch(`${API_URL}/events-admin/${selectedEvent.id}/background?id_admin=${id_admin}`, {
             method: "POST",
             body: formData
         })
@@ -371,7 +438,7 @@ const Event = () => {
             .then((data) => {
                 if (data.status === "success") {
                     alert("Cập nhật ảnh nền thành công!");
-                    refreshEvents(); // ✅ Refresh để cập nhật ev_back
+                    refreshEvents();
                 } else {
                     alert("Lỗi: " + data.message);
                 }
@@ -380,30 +447,28 @@ const Event = () => {
                 console.error("Error updating background image:", error);
                 alert("Có lỗi khi cập nhật ảnh nền.");
             });
+    }
 
-        setShowUploadForm(false);
-    };
-
-    const filteredEvents = events.filter((event) => {
-        if (filterOption === "day") {
-            const today = new Date().toISOString().split("T")[0];
-            return event.date === today;
-        } else if (filterOption === "month") {
-            const currentMonth = new Date().toISOString().slice(0, 7);
-            return event.date.startsWith(currentMonth);
-        }
-        return true;
-    });
+    setShowUploadForm(false);
+    setBackgroundFile(null); // Reset sau khi lưu
+};
 
     // === Cập nhật logic lọc & tìm kiếm ===
     const filteredAndSearchedEvents = useMemo(() => {
         const source = Array.isArray(events) ? events : [];
-        let result = [...events];
+        let result = [...source];
 
         // Lọc theo ngày/tháng
         if (filterOption === "day") {
-            const today = new Date().toISOString().split("T")[0];
-            result = result.filter(event => event.date === today);
+            // Lọc theo ngày gần đây nhất
+            if (result.length > 0) {
+                // Sắp xếp theo ngày giảm dần
+                const sorted = [...result].sort((a, b) => new Date(b.date) - new Date(a.date));
+                // Lấy ngày gần nhất
+                const latestDate = sorted[0].date;
+                // Lọc tất cả sự kiện có cùng ngày gần nhất
+                result = result.filter(event => event.date === latestDate);
+            }
         } else if (filterOption === "month") {
             const currentMonth = new Date().toISOString().slice(0, 7);
             result = result.filter(event => event.date.startsWith(currentMonth));
@@ -415,7 +480,7 @@ const Event = () => {
             result = result.filter(event =>
                 String(event.id).includes(term) ||
                 event.name.toLowerCase().includes(term) ||
-                event.date.includes(term) // ngày dạng "YYYY-MM-DD", nên có thể tìm "2025", "05", v.v.
+                event.date.includes(term)
             );
         }
 
@@ -441,6 +506,62 @@ const Event = () => {
         }
     };
 
+    // === CHỌN TẤT CẢ TOÀN CỤC ===
+    const toggleSelectAllGlobal = async () => {
+        if (selectAllGlobal) {
+            setSelectedIds([]);
+            setSelectAllGlobal(false);
+            return;
+        }
+
+        if (filteredAndSearchedEvents.length === 0) {
+            alert('Không có sự kiện nào để chọn!');
+            return;
+        }
+
+        const allIds = filteredAndSearchedEvents.map(e => e.id);
+        setSelectedIds(allIds);
+        setSelectAllGlobal(true);
+        alert(`Đã chọn tất cả ${allIds.length} sự kiện!`);
+    };
+
+    const toggleSelectId = (id) => {
+        setSelectedIds(prev => {
+            if (prev.includes(id)) {
+                return prev.filter(x => x !== id);
+            } else {
+                return [...prev, id];
+            }
+        });
+    };
+
+    const handleBatchDelete = async () => {
+        if (selectedIds.length === 0) {
+            alert('Vui lòng chọn ít nhất 1 sự kiện để xóa!');
+            return;
+        }
+        if (!confirm(`Xóa vĩnh viễn ${selectedIds.length} sự kiện đã chọn?\nHành động này không thể hoàn tác!`)) return;
+
+        try {
+            const promises = selectedIds.map(id =>
+                fetch(`${API_URL}/events-admin/${id}?id_admin=${id_admin}`, { method: 'DELETE' })
+            );
+            await Promise.all(promises);
+            alert(`Đã xóa thành công ${selectedIds.length} sự kiện!`);
+            setSelectedIds([]);
+            setSelectAllGlobal(false);
+            refreshEvents();
+        } catch (err) {
+            alert('Có lỗi khi xóa hàng loạt!');
+        }
+    };
+
+    const isCurrentPageFullySelected = paginatedEvents.length > 0 && paginatedEvents.every(e => selectedIds.includes(e.id));
+
+    // Tính toán hiển thị trang
+    const startItem = (currentPage - 1) * ITEMS_PER_PAGE + 1;
+    const endItem = Math.min(currentPage * ITEMS_PER_PAGE, filteredAndSearchedEvents.length);
+
     return (
         <>
             <Navbar
@@ -450,177 +571,199 @@ const Event = () => {
                 username={username}
             />
 
-            <div className={`event-main-container ${sidebarCollapsed ? 'event-sidebar-collapsed' : ''}`}>
-                <div className="event-header">
-                    <div className="event-title-container">
-                        <h2 className="event-title">SỰ KIỆN</h2>
+            <div className="event-scroll-container">
+                <div className={`event-main-container ${sidebarCollapsed ? 'event-sidebar-collapsed' : ''}`}>
+                    <div className="event-header">
+                        <h2 className="event-title">QUẢN LÝ SỰ KIỆN</h2>
                     </div>
 
-                    <div className="event-search">
-                    <div className="event-filter">
-                        <button
-                            className="event-filter-btn"
-                            onClick={() =>
-                                setFilterOption(filterOption === "none" ? "show" : "none")
-                            }
-                        >
-                            <FaChevronDown />
-                        </button>
-                        {filterOption === "show" && (
-                            <div className="filter-options">
-                                <button className="filter-btn" onClick={() => setFilterOption("day")}>
-                                    Lọc theo ngày
-                                </button>
-                                <button className="filter-btn" onClick={() => setFilterOption("month")}>
-                                    Lọc theo tháng
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                        <input
-                            type="text"
-                            placeholder="Tìm kiếm theo id, tên, ngày"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                        <button
-                            className="event-add-btn"
-                            onClick={() => {
-                                setShowAddForm(true);
-                                setEventIdToEdit(null);
-                                setEventName("");
-                                setEventDate("");
-                                setSelectedUsers([]);
-                            }}
-                            title="Thêm sự kiện mới"
-                        >
-                            <FaPlus />
-                            <span style={{ marginLeft: '8px' }}>Thêm Sự Kiện</span>
-                        </button>
-                    </div>
-                </div>
-
-                <div className="event-table-wrapper">
-                    <table className="event-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Tên</th>
-                                <th>Ngày</th>
-                                <th>Ảnh nền</th>
-                                <th>Logo</th>
-                                <th>Ghi chú</th>
-                                <th>Hành động</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {paginatedEvents.map((event) => (
-                                <tr key={event.id}>
-                                    <td>{event.id}</td>
-                                    <td>{event.name}</td>
-                                    <td>{event.date}</td>
-                                    <td>
-                                        <button
-                                            className="event-icon-btn"
-                                            onClick={() => {
-                                                setSelectedEvent(event);
-                                                setBgApplyOption(
-                                                    event.ev_back === 1 ? "home" :
-                                                        event.ev_back === 2 ? "all-pages" : "cancel"
-                                                );
-                                                setShowUploadForm(true);
-                                            }}
-                                        >
-                                            <FaUpload />
-                                        </button>
-                                    </td>
-                                    <td>
-                                        <button
-                                            className="event-icon-btn"
-                                            onClick={() => {
-                                                setSelectedEvent(event);
-                                                setLogoApplyOption(event.ev_logo === 1 ? "home" : "cancel");
-                                                setShowLogoUploadForm(true);
-                                            }}
-                                        >
-                                            <FaUpload />
-                                        </button>
-                                    </td>
-                                    <td>
-                                        <button
-                                            className="event-icon-btn"
-                                            onClick={() => {
-                                                setSelectedEvent(event);
-                                                const noteObj = notes.find(note => note.id === event.id) || {
-                                                    id: event.id,
-                                                    note1: "",
-                                                    note2: "",
-                                                    note3: ""
-                                                };
-                                                setCurrentNote(noteObj);
-                                                setNoteApply(event.ev_note === 1 ? "home" : "cancel");
-                                                setShowTextForm(true);
-                                            }}
-                                        >
-                                            <FaFileAlt />
-                                        </button>
-                                    </td>
-                                    <td>
-                                        <button
-                                            className="event-icon-btn"
-                                            onClick={() => {
-                                                setShowAddForm(true);
-                                                setEventIdToEdit(event.id);
-                                                setEventName(event.name);
-                                                setEventDate(event.date);
-                                                const appliedUsers = Array.isArray(event.apply) ? event.apply : [];
-                                                setSelectedUsers(appliedUsers);
-                                            }}
-                                        >
-                                            <FaEdit />
-                                        </button>
-                                        <button
-                                            className="event-icon-btn"
-                                            onClick={() => handleDeleteEvent(event.id)}
-                                        >
-                                            <FaTrash />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Phân trang */}
-                {totalPages > 1 && (
-                    <div className="event-pagination">
-                        <button
-                            onClick={() => goToPage(currentPage - 1)}
-                            disabled={currentPage === 1}
-                            className="event-pagination-btn"
-                        >
-                        <i className="fa-solid fa-arrow-left"></i>
-                        </button>
-                        {[...Array(totalPages)].map((_, i) => (
+                    <div className="event-controls">
+                        <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
                             <button
-                                key={i + 1}
-                                onClick={() => goToPage(i + 1)}
-                                className={`event-pagination-btn ${currentPage === i + 1 ? 'event-pagination-active' : ''
-                                    }`}
+                                className="event-btn-pink"
+                                onClick={() => {
+                                    setShowAddForm(true);
+                                    setEventIdToEdit(null);
+                                    setEventName("");
+                                    setEventDate("");
+                                    setSelectedUsers([]);
+                                }}
                             >
-                                {i + 1}
+                                <i className="bi bi-plus-lg"></i> Thêm sự kiện
                             </button>
-                        ))}
-                        <button
-                            onClick={() => goToPage(currentPage + 1)}
-                            disabled={currentPage === totalPages}
-                            className="event-pagination-btn"
-                        >
-                        <i className="fa-solid fa-arrow-right"></i>
-                        </button>
+                            <button
+                                className={`event-btn-pink batch-delete-btn ${selectedIds.length === 0 ? 'disabled' : ''}`}
+                                onClick={handleBatchDelete}
+                            >
+                                Xóa {selectedIds.length > 0 ? selectedIds.length : 'nhiều sự kiện'}
+                            </button>
+                        </div>
+
+                        <div className="event-searchFillter">
+                            <div className="event-search-box">
+                                <i className="bi bi-search"></i>
+                                <input
+                                    type="text"
+                                    placeholder="Tìm kiếm theo id, tên, ngày..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="event-filter-wrapper" ref={filterRef}>
+                                <button
+                                    className="event-filter-toggle-btn"
+                                    onClick={() => setShowFilterMenu(prev => !prev)}
+                                >
+                                    <i className="bi bi-funnel"></i>
+                                </button>
+
+                                <div className={`event-filter-menu ${showFilterMenu ? 'show' : ''}`}>
+                                    <button className={filterOption === 'all' ? 'active' : ''} onClick={() => { setFilterOption('all'); setShowFilterMenu(false); }}>
+                                        Tất cả
+                                    </button>
+                                    <button className={filterOption === 'day' ? 'active' : ''} onClick={() => { setFilterOption('day'); setShowFilterMenu(false); }}>
+                                        Lọc theo ngày gần đây nhất
+                                    </button>
+                                    <button className={filterOption === 'month' ? 'active' : ''} onClick={() => { setFilterOption('month'); setShowFilterMenu(false); }}>
+                                        Lọc theo tháng hiện tại
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                )}
+
+                    <div className="event-table-wrapper">
+                        <table className="event-table">
+                            <thead>
+                                <tr>
+                                    <th style={{ width: '50px', textAlign: 'center' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectAllGlobal || isCurrentPageFullySelected}
+                                            onChange={toggleSelectAllGlobal}
+                                            className="event-custom-checkbox"
+                                            title={selectAllGlobal ? "Bỏ chọn tất cả" : "Chọn tất cả sự kiện ở mọi trang"}
+                                        />
+                                    </th>
+                                    <th>STT</th>
+                                    <th>TÊN</th>
+                                    <th>NGÀY</th>
+                                    <th>ẢNH NỀN</th>
+                                    <th>LOGO</th>
+                                    <th>GHI CHÚ</th>
+                                    <th style={{ textAlign: 'center' }}>HÀNH ĐỘNG</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {paginatedEvents.length > 0 ? (
+                                    paginatedEvents.map((event) => (
+                                        <tr key={event.id} className={selectedIds.includes(event.id) ? 'selected-row' : ''}>
+                                            <td style={{ textAlign: 'center' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedIds.includes(event.id)}
+                                                    onChange={() => toggleSelectId(event.id)}
+                                                    className="event-custom-checkbox"
+                                                />
+                                            </td>
+                                            <td>{event.id}</td>
+                                            <td><strong>{event.name}</strong></td>
+                                            <td>{event.date}</td>
+                                            <td>
+                                                <button
+                                                    className="event-icon-btn"
+                                                    onClick={() => {
+                                                        setSelectedEvent(event);
+                                                        setBgApplyOption(
+                                                            event.ev_back === 1 ? "home" :
+                                                                event.ev_back === 2 ? "all-pages" : "cancel"
+                                                        );
+                                                        setShowUploadForm(true);
+                                                    }}
+                                                >
+                                                    <FaUpload />
+                                                </button>
+                                            </td>
+                                            <td>
+                                                <button
+                                                    className="event-icon-btn"
+                                                    onClick={() => {
+                                                        setSelectedEvent(event);
+                                                        setLogoApplyOption(event.ev_logo === 1 ? "home" : "cancel");
+                                                        setShowLogoUploadForm(true);
+                                                    }}
+                                                >
+                                                    <FaUpload />
+                                                </button>
+                                            </td>
+                                            <td>
+                                                <button
+                                                    className="event-icon-btn"
+                                                    onClick={() => {
+                                                        setSelectedEvent(event);
+                                                        const noteObj = notes.find(note => note.id === event.id) || {
+                                                            id: event.id,
+                                                            note1: "",
+                                                            note2: "",
+                                                            note3: ""
+                                                        };
+                                                        setCurrentNote(noteObj);
+                                                        setNoteApply(event.ev_note === 1 ? "home" : "cancel");
+                                                        setShowTextForm(true);
+                                                    }}
+                                                >
+                                                    <FaFileAlt />
+                                                </button>
+                                            </td>
+                                            <td className="event-actions">
+                                                <button
+                                                    onClick={() => {
+                                                        setShowAddForm(true);
+                                                        setEventIdToEdit(event.id);
+                                                        setEventName(event.name);
+                                                        setEventDate(event.date);
+                                                        const appliedUsers = Array.isArray(event.apply) ? event.apply : [];
+                                                        setSelectedUsers(appliedUsers);
+                                                    }}
+                                                    className="edit-btn"
+                                                >
+                                                    <i className="bi bi-pencil"></i>
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteEvent(event.id)}
+                                                    className="delete-btn"
+                                                >
+                                                    <i className="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr><td colSpan="8" style={{ textAlign: 'center' }}>Không có dữ liệu.</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* PAGINATION BÊN DƯỚI */}
+                    {filteredAndSearchedEvents.length > 0 && (
+                        <div className="event-pagination">
+                            <span>
+                                Hiển thị {startItem} - {endItem} trên {filteredAndSearchedEvents.length} sự kiện
+                            </span>
+                            <div className="pagination-buttons">
+                                <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>«</button>
+                                {[...Array(totalPages)].map((_, i) => (
+                                    <button key={i + 1} onClick={() => goToPage(i + 1)} className={currentPage === i + 1 ? 'active' : ''}>
+                                        {i + 1}
+                                    </button>
+                                ))}
+                                <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}>»</button>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Modal thêm/sửa sự kiện */}
@@ -679,86 +822,146 @@ const Event = () => {
             )}
 
             {/* Modal tải ảnh nền */}
-            {showUploadForm && (
-                <div className="event-modal-overlay" onClick={() => setShowUploadForm(false)}>
-                    <div className="event-modal-content" onClick={e => e.stopPropagation()}>
-                        <h3>Tải Ảnh Nền</h3>
-                        <input type="file" onChange={handleBackgroundFileChange} accept="image/*" />
-                        <div className="checkbox-group">
-                            <label>
-                                <input
-                                    type="radio"
-                                    name="apply"
-                                    value="home"
-                                    checked={bgApplyOption === "home"}
-                                    onChange={(e) => setBgApplyOption(e.target.value)}
-                                />
-                                <span className="radio-btn"></span> Áp dụng trang Home
-                            </label>
-                            <label>
-                                <input
-                                    type="radio"
-                                    name="apply"
-                                    value="all-pages"
-                                    checked={bgApplyOption === "all-pages"}
-                                    onChange={(e) => setBgApplyOption(e.target.value)}
-                                />
-                                <span className="radio-btn"></span> Áp dụng all pages
-                            </label>
-                            <label>
-                                <input
-                                    type="radio"
-                                    name="apply"
-                                    value="cancel"
-                                    checked={bgApplyOption === "cancel"}
-                                    onChange={(e) => setBgApplyOption(e.target.value)}
-                                />
-                                <span className="radio-btn"></span> Hủy áp dụng
-                            </label>
-                        </div>
-                        <div className="modal-buttons">
-                            <button className="cancel-btn" onClick={() => setShowUploadForm(false)}>Hủy</button>
-                            <button className="save-btn" onClick={handleSaveBackgroundImage}>Lưu</button>
-                        </div>
-                    </div>
+{/* Modal tải ảnh nền */}
+{showUploadForm && selectedEvent && (
+// Trong modal background
+<div className="event-modal-overlay" onClick={() => {
+    setShowUploadForm(false);
+    setBackgroundFile(null); // ← thêm dòng này
+}}>
+        <div className="event-modal-content" onClick={e => e.stopPropagation()}>
+            <h3>Tải Ảnh Nền</h3>
+
+            {/* Hiển thị ảnh nền hiện tại nếu có */}
+            {selectedEvent.background && (
+                <div style={{ marginBottom: '15px' }}>
+                    <p style={{ marginBottom: '5px', fontSize: '14px', color: '#666' }}>Ảnh nền hiện tại:</p>
+                    <img
+                        src={selectedEvent.background}
+                        alt="Ảnh nền hiện tại"
+                        style={{
+                            maxWidth: '100%',
+                            maxHeight: '200px',
+                            border: '1px solid #ddd',
+                            borderRadius: '4px'
+                        }}
+                    />
                 </div>
             )}
 
+            <input
+                type="file"
+                onChange={handleBackgroundFileChange}
+                accept="image/*"
+                style={{ marginBottom: '15px' }}
+            />
+
+            <div className="checkbox-group">
+                <label>
+                    <input
+                        type="radio"
+                        name="apply"
+                        value="home"
+                        checked={bgApplyOption === "home"}
+                        onChange={(e) => setBgApplyOption(e.target.value)}
+                    />
+                    <span className="radio-btn"></span> Áp dụng trang Home
+                </label>
+                <label>
+                    <input
+                        type="radio"
+                        name="apply"
+                        value="all-pages"
+                        checked={bgApplyOption === "all-pages"}
+                        onChange={(e) => setBgApplyOption(e.target.value)}
+                    />
+                    <span className="radio-btn"></span> Áp dụng all pages
+                </label>
+                <label>
+                    <input
+                        type="radio"
+                        name="apply"
+                        value="cancel"
+                        checked={bgApplyOption === "cancel"}
+                        onChange={(e) => setBgApplyOption(e.target.value)}
+                    />
+                    <span className="radio-btn"></span> Hủy áp dụng
+                </label>
+            </div>
+
+            <div className="modal-buttons">
+                <button className="cancel-btn" onClick={() => setShowUploadForm(false)}>Hủy</button>
+                <button className="save-btn" onClick={handleSaveBackgroundImage}>Lưu</button>
+            </div>
+        </div>
+    </div>
+)}
+
             {/* Modal tải logo */}
-            {showLogoUploadForm && (
-                <div className="event-modal-overlay" onClick={() => setShowLogoUploadForm(false)}>
-                    <div className="event-modal-content" onClick={e => e.stopPropagation()}>
-                        <h3>Tải Logo</h3>
-                        <input type="file" onChange={(e) => setLogoFile(e.target.files[0])} accept="image/*" />
-                        <div className="checkbox-group">
-                            <label>
-                                <input
-                                    type="radio"
-                                    name="applyLogo"
-                                    value="home"
-                                    checked={logoApplyOption === "home"}
-                                    onChange={(e) => setLogoApplyOption(e.target.value)}
-                                />
-                                <span className="radio-btn"></span> Áp dụng trang Home
-                            </label>
-                            <label>
-                                <input
-                                    type="radio"
-                                    name="applyLogo"
-                                    value="cancel"
-                                    checked={logoApplyOption === "cancel"}
-                                    onChange={(e) => setLogoApplyOption(e.target.value)}
-                                />
-                                <span className="radio-btn"></span> Hủy áp dụng
-                            </label>
-                        </div>
-                        <div className="modal-buttons">
-                            <button className="cancel-btn" onClick={() => setShowLogoUploadForm(false)}>Hủy</button>
-                            <button className="save-btn" onClick={handleSaveLogoImage}>Lưu</button>
-                        </div>
-                    </div>
+{/* Modal tải logo */}
+{showLogoUploadForm && selectedEvent && (
+// Trong modal background
+<div className="event-modal-overlay" onClick={() => {
+    setShowUploadForm(false);
+    setBackgroundFile(null); // ← thêm dòng này
+}}>
+        <div className="event-modal-content" onClick={e => e.stopPropagation()}>
+            <h3>Tải Logo</h3>
+
+            {/* Hiển thị logo hiện tại nếu có */}
+            {selectedEvent.logo && (
+                <div style={{ marginBottom: '15px' }}>
+                    <p style={{ marginBottom: '5px', fontSize: '14px', color: '#666' }}>Logo hiện tại:</p>
+                    <img
+                        src={selectedEvent.logo}
+                        alt="Logo hiện tại"
+                        style={{
+                            maxWidth: '100%',
+                            maxHeight: '150px',
+                            border: '1px solid #ddd',
+                            borderRadius: '4px'
+                        }}
+                    />
                 </div>
             )}
+
+            <input
+                type="file"
+                onChange={(e) => setLogoFile(e.target.files[0])}
+                accept="image/*"
+                style={{ marginBottom: '15px' }}
+            />
+
+            <div className="checkbox-group">
+                <label>
+                    <input
+                        type="radio"
+                        name="applyLogo"
+                        value="home"
+                        checked={logoApplyOption === "home"}
+                        onChange={(e) => setLogoApplyOption(e.target.value)}
+                    />
+                    <span className="radio-btn"></span> Áp dụng trang Home
+                </label>
+                <label>
+                    <input
+                        type="radio"
+                        name="applyLogo"
+                        value="cancel"
+                        checked={logoApplyOption === "cancel"}
+                        onChange={(e) => setLogoApplyOption(e.target.value)}
+                    />
+                    <span className="radio-btn"></span> Hủy áp dụng
+                </label>
+            </div>
+
+            <div className="modal-buttons">
+                <button className="cancel-btn" onClick={() => setShowLogoUploadForm(false)}>Hủy</button>
+                <button className="save-btn" onClick={handleSaveLogoImage}>Lưu</button>
+            </div>
+        </div>
+    </div>
+)}
 
             {/* Modal tạo ghi chú */}
             {showTextForm && (
@@ -817,3 +1020,4 @@ const Event = () => {
 };
 
 export default Event;
+                                  

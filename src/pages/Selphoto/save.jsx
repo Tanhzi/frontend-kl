@@ -174,7 +174,11 @@ const SelPhoto = () => {
             if (data.status === 'success') {
                 setSwapTemplates(data.data || []);
                 setFilteredSwapTemplates(data.data || []);
-                setSwapCategories(data.unique_names || []);
+                const uniqueTopics = [...new Set(data.data.map(item => item.topic).filter(Boolean))];
+                setSwapCategories(uniqueTopics || []);
+                console.log('Swap categories:', uniqueTopics);
+                console.log('Swap data:', data.data);
+                console.log('Swap data keys:', Object.keys(data.data[0] || {}));
             }
         }
 
@@ -184,7 +188,11 @@ const SelPhoto = () => {
             if (data.status === 'success') {
                 setBgTemplates(data.data || []);
                 setFilteredBgTemplates(data.data || []);
-                setBgCategories(data.unique_names || []);
+                const uniqueNames = [...new Set(data.data.map(item => item.name).filter(Boolean))];
+                setBgCategories(uniqueNames || []);
+                console.log('Background categories:', uniqueNames);
+                console.log('Background data:', data.data);
+                console.log('Background data keys:', Object.keys(data.data[0] || {}));
             }
         }
 
@@ -208,28 +216,40 @@ const SelPhoto = () => {
     }
   }, [selectedBgCategory, bgTemplates]);
 
-  // === HÀM HỖ TRỢ: CHUYỂN URL ẢNH THÀNH FILE ===
+    useEffect(() => {
+    if (selectedSwapCategory === 'all') {
+      setFilteredSwapTemplates(swapTemplates);
+    } else {
+      setFilteredSwapTemplates(swapTemplates.filter(t => t.topic === selectedSwapCategory));
+    }
+  }, [selectedSwapCategory, swapTemplates]);
+
+// === HÀM HỖ TRỢ: CHUYỂN URL/BASE64 THÀNH FILE OBJECT ===
+  // (Đảm bảo hàm này nằm trong component SelPhoto hoặc bên ngoài trước khi gọi)
   const urlToFile = async (url, filename, mimeType) => {
     const res = await fetch(url);
     const buf = await res.arrayBuffer();
     return new File([buf], filename, { type: mimeType });
   };
 
-  // === LOGIC THỰC HIỆN FACE SWAP (BỊ THIẾU) ===
+  // === LOGIC THỰC HIỆN FACE SWAP (ĐÃ CẬP NHẬT) ===
   const handleFaceSwap = async (template) => {
     const currentSlot = selectedSlots[selectedImageIndex];
     
-    // Validate
+    // 1. Validate: Kiểm tra đã chọn ảnh chưa
     if (!currentSlot || !currentSlot.photo) {
       alert("Vui lòng chọn hoặc chụp ảnh trước khi Face Swap!");
       return;
     }
+    
+    // Nếu đang chọn lại chính template đó thì bỏ qua
     if (selectedSwapId === template.id) return;
 
-    // A. KIỂM TRA CACHE TRƯỚC (Sử dụng state swappedCache bạn đã khai báo ở dòng 24)
+    // 2. KIỂM TRA CACHE (Nếu đã làm rồi thì lấy lại kết quả cũ cho nhanh)
     if (swappedCache[selectedImageIndex] && swappedCache[selectedImageIndex][template.id]) {
       console.log('[CACHE] Lấy ảnh FaceSwap từ bộ nhớ đệm...');
       
+      // Lưu ảnh gốc để restore sau này nếu chưa lưu
       if (!originalImages[selectedImageIndex]) {
         setOriginalImages(prev => ({
           ...prev,
@@ -249,14 +269,15 @@ const SelPhoto = () => {
       return;
     }
 
-    // B. GỌI API
+    // 3. BẮT ĐẦU XỬ LÝ API
     try {
       setIsProcessingSwap(true);
       setSelectedSwapId(template.id);
 
-      // Chuẩn bị ảnh nguồn
+      // --- BƯỚC A: CHUẨN BỊ ẢNH NGUỒN (ẢNH NGƯỜI DÙNG) ---
       let sourceFile;
       if (currentSlot.photo.startsWith('data:')) {
+        // Xử lý nếu là Base64 (ảnh chụp trực tiếp)
         const arr = currentSlot.photo.split(',');
         const mime = arr[0].match(/:(.*?);/)[1];
         const bstr = atob(arr[1]);
@@ -265,24 +286,62 @@ const SelPhoto = () => {
         while(n--){ u8arr[n] = bstr.charCodeAt(n); }
         sourceFile = new File([u8arr], "source.jpg", {type: mime});
       } else {
+        // Xử lý nếu là URL (ảnh upload)
         sourceFile = await urlToFile(currentSlot.photo, "source.jpg", "image/jpeg");
       }
 
-      // Chuẩn bị ảnh đích
-      const targetFile = await urlToFile(template.illustration, "target.jpg", "image/jpeg");
+      // --- BƯỚC B: XÁC ĐỊNH ẢNH ĐÍCH (TARGET) ---
+      let targetFile;
 
-      const formData = new FormData();
-      formData.append('source', sourceFile);
-      formData.append('target', targetFile);
+      // KIỂM TRA: Template có prompt không?
+      if (template.prompt && template.prompt.trim() !== "") {
+          // === TRƯỜNG HỢP 1: CÓ PROMPT => TẠO ẢNH ĐÍCH MỚI BẰNG AI ===
+          console.log('[FACESWAP] Đang tạo ảnh đích từ Prompt + Giới tính...');
+          
+          const genFormData = new FormData();
+          genFormData.append('image', sourceFile); // Gửi ảnh gốc để AI check giới tính
+          genFormData.append('prompt', template.prompt);
+
+          // Gọi API Bridge (Port 5000)
+          const genRes = await fetch('http://localhost:5000/user-generate-target', {
+              method: 'POST',
+              body: genFormData
+          });
+          
+          const genData = await genRes.json();
+          if (!genData.success) {
+            throw new Error(genData.error || "Lỗi khi tạo ảnh đích (Gen AI)");
+          }
+
+          // Chuyển kết quả ảnh đích (Base64) thành File để chuẩn bị Swap
+          // Lưu ý: genData.target_image là base64 trả về từ server
+          const targetRes = await fetch(genData.target_image);
+          const targetBlob = await targetRes.blob();
+          targetFile = new File([targetBlob], "target_gen.jpg", { type: "image/jpeg" });
+
+      } else {
+          // === TRƯỜNG HỢP 2: KHÔNG PROMPT => DÙNG ẢNH TEMPLATE CÓ SẴN ===
+          console.log('[FACESWAP] Sử dụng ảnh mẫu có sẵn làm đích...');
+          targetFile = await urlToFile(template.illustration, "target_static.jpg", "image/jpeg");
+      }
+
+      // --- BƯỚC C: THỰC HIỆN FACE SWAP (GỘP) ---
+      // (Dù là ảnh đích tự tạo hay ảnh mẫu thì đều chạy qua bước này)
+      console.log('[FACESWAP] Đang thực hiện hoán đổi khuôn mặt...');
+
+      const swapFormData = new FormData();
+      swapFormData.append('source', sourceFile);
+      swapFormData.append('target', targetFile);
 
       const response = await fetch('http://localhost:5000/face-swap', {
         method: 'POST',
-        body: formData
+        body: swapFormData
       });
 
       const data = await response.json();
 
       if (data.success && data.swapped_image) {
+        // 1. Lưu ảnh gốc để có thể "Reset"
         let originalPhoto = originalImages[selectedImageIndex];
         if (!originalPhoto) {
           originalPhoto = currentSlot.photo;
@@ -292,10 +351,10 @@ const SelPhoto = () => {
           }));
         }
 
-        // Cắt ảnh cho đúng tỉ lệ
+        // 2. Cắt ảnh (Crop) cho đúng tỉ lệ khung hình
         const croppedImage = await cropImageToMatchOriginal(data.swapped_image, originalPhoto);
 
-        // Lưu Cache
+        // 3. Lưu vào Cache
         setSwappedCache(prev => ({
           ...prev,
           [selectedImageIndex]: {
@@ -304,22 +363,25 @@ const SelPhoto = () => {
           }
         }));
 
-        // Cập nhật Slot
+        // 4. Cập nhật Slot hiển thị
         const updatedSlots = [...selectedSlots];
         updatedSlots[selectedImageIndex] = {
           ...updatedSlots[selectedImageIndex],
           photo: croppedImage
         };
         setSelectedSlots(updatedSlots);
+        
+        // Reset filter về 'original' vì ảnh AI đã đẹp sẵn rồi
         setAppliedFilters(prev => ({ ...prev, [selectedImageIndex]: 'original' }));
         
       } else {
-        throw new Error(data.error || "Lỗi không xác định");
+        throw new Error(data.error || "Lỗi không xác định từ Server FaceSwap");
       }
 
     } catch (error) {
       console.error('[FACESWAP ERROR]', error);
       alert(`Lỗi Face Swap: ${error.message}`);
+      // Nếu lỗi thì bỏ chọn template để user có thể ấn lại
       setSelectedSwapId(null);
     } finally {
       setIsProcessingSwap(false);
@@ -382,41 +444,48 @@ const SelPhoto = () => {
   };
 
 // === LOGIC THỰC HIỆN BACKGROUND AI ===
+// === LOGIC THỰC HIỆN BACKGROUND AI (ĐÃ SỬA) ===
   const handleBackgroundAI = async (template) => {
     const currentSlot = selectedSlots[selectedImageIndex];
     
-    // Validate
+    // 1. Validate: Phải có ảnh người trước
     if (!currentSlot || !currentSlot.photo) {
-      alert("Vui lòng chọn hoặc chụp ảnh trước!");
+      alert("Vui lòng chọn hoặc chụp ảnh trước khi ghép nền!");
       return;
     }
+    
+    // Nếu click lại template đang chọn thì bỏ qua
     if (selectedBgId === template.id) return;
 
-    // A. KIỂM TRA CACHE
+    // 2. KIỂM TRA CACHE (Nếu đã làm rồi thì lấy lại ngay)
     if (bgCache[selectedImageIndex] && bgCache[selectedImageIndex][template.id]) {
-      console.log('[CACHE] Lấy ảnh Background từ cache...');
+      console.log('[CACHE] Lấy ảnh Background từ bộ nhớ đệm...');
       
+      // Lưu ảnh gốc nếu chưa lưu
       if (!originalImages[selectedImageIndex]) {
         setOriginalImages(prev => ({...prev, [selectedImageIndex]: currentSlot.photo}));
       }
 
       const cachedImage = bgCache[selectedImageIndex][template.id];
+      
+      // Cập nhật UI
       const updatedSlots = [...selectedSlots];
       updatedSlots[selectedImageIndex] = { ...updatedSlots[selectedImageIndex], photo: cachedImage };
       setSelectedSlots(updatedSlots);
       setSelectedBgId(template.id);
-      setAppliedFilters(prev => ({ ...prev, [selectedImageIndex]: 'original' }));
+      setAppliedFilters(prev => ({ ...prev, [selectedImageIndex]: 'original' })); // Reset filter
       return;
     }
 
-    // B. GỌI API
+    // 3. GỌI API XỬ LÝ
     try {
-      setIsProcessingBg(true);
+      setIsProcessingBg(true); // Bật loading
       setSelectedBgId(template.id);
 
-      // Chuẩn bị File Foreground (ảnh người dùng)
+      // --- Bước A: Chuẩn bị file Foreground (Ảnh người dùng) ---
       let sourceFile;
       if (currentSlot.photo.startsWith('data:')) {
+        // Nếu là ảnh chụp cam (base64) -> convert sang File
         const arr = currentSlot.photo.split(',');
         const mime = arr[0].match(/:(.*?);/)[1];
         const bstr = atob(arr[1]);
@@ -425,17 +494,22 @@ const SelPhoto = () => {
         while(n--){ u8arr[n] = bstr.charCodeAt(n); }
         sourceFile = new File([u8arr], "foreground.jpg", {type: mime});
       } else {
+        // Nếu là ảnh upload (URL blob) -> convert sang File
         sourceFile = await urlToFile(currentSlot.photo, "foreground.jpg", "image/jpeg");
       }
 
-      // Chuẩn bị File Background (ảnh mẫu từ API)
+      // --- Bước B: Chuẩn bị file Background (Ảnh mẫu) ---
+      // template.illustration là URL của ảnh nền mẫu trên server/admin
       const targetFile = await urlToFile(template.illustration, "background.jpg", "image/jpeg");
 
+      // --- Bước C: Gửi FormData ---
       const formData = new FormData();
       formData.append('foreground', sourceFile);
       formData.append('background', targetFile);
 
-      console.log('[BG-AI] Đang gửi yêu cầu...');
+      console.log('[BG-AI] Đang gửi yêu cầu ghép nền...');
+      
+      // Gọi về Bridge Server (Localhost:5000)
       const response = await fetch('http://localhost:5000/background-ai', {
         method: 'POST',
         body: formData
@@ -444,17 +518,18 @@ const SelPhoto = () => {
       const data = await response.json();
 
       if (data.success && data.result_image) {
-        // 1. Lưu ảnh gốc
+        // 1. Lưu ảnh gốc để restore sau này
         let originalPhoto = originalImages[selectedImageIndex];
         if (!originalPhoto) {
           originalPhoto = currentSlot.photo;
           setOriginalImages(prev => ({ ...prev, [selectedImageIndex]: originalPhoto }));
         }
 
-        // 2. CẮT ẢNH CHO ĐÚNG TỈ LỆ
+        // 2. CẮT ẢNH (CROP) CHO ĐÚNG TỈ LỆ KHUNG HÌNH
+        // (Dùng lại hàm cropImageToMatchOriginal của phần FaceSwap)
         const croppedImage = await cropImageToMatchOriginal(data.result_image, originalPhoto);
 
-        // 3. LƯU VÀO CACHE
+        // 3. LƯU CACHE
         setBgCache(prev => ({
           ...prev,
           [selectedImageIndex]: {
@@ -463,22 +538,24 @@ const SelPhoto = () => {
           }
         }));
 
-        // 4. CẬP NHẬT SLOT
+        // 4. HIỂN THỊ LÊN SLOT
         const updatedSlots = [...selectedSlots];
         updatedSlots[selectedImageIndex] = { ...updatedSlots[selectedImageIndex], photo: croppedImage };
         setSelectedSlots(updatedSlots);
+        
+        // Reset filter về original để ảnh đẹp nhất
         setAppliedFilters(prev => ({ ...prev, [selectedImageIndex]: 'original' }));
         
       } else {
-        throw new Error(data.error || "Lỗi server");
+        throw new Error(data.error || "Lỗi xử lý từ Server");
       }
 
     } catch (error) {
       console.error('[BG-AI ERROR]', error);
-      alert(`Lỗi: ${error.message}`);
-      setSelectedBgId(null);
+      alert(`Lỗi ghép nền: ${error.message}`);
+      setSelectedBgId(null); // Bỏ chọn nếu lỗi
     } finally {
-      setIsProcessingBg(false);
+      setIsProcessingBg(false); // Tắt loading
     }
   };
   

@@ -12,117 +12,164 @@ const AiTopic = () => {
   const { id_admin, username: adminName } = auth || {};
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [topics, setTopics] = useState([]);
+  
+  // --- STATE DỮ LIỆU & PHÂN TRANG (CLIENT SIDE) ---
+  const [allTopics, setAllTopics] = useState([]); // Dữ liệu gốc từ API
+  const [displayedTopics, setDisplayedTopics] = useState([]); // Dữ liệu hiển thị sau khi lọc/phân trang
   const [loading, setLoading] = useState(true);
+
+  // Bộ lọc & Tìm kiếm
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterName, setFilterName] = useState('');
+  const [filterTopic, setFilterTopic] = useState('');
+  const [uniqueTopics, setUniqueTopics] = useState([]);
+
+  // Phân trang
   const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [totalPages, setTotalPages] = useState(1);
-  const [totalTopics, setTotalTopics] = useState(0);
-  const [uniqueNames, setUniqueNames] = useState([]);
+  const [totalItems, setTotalItems] = useState(0);
 
-  // XÓA HÀNG LOẠT
+  // Checkbox & Xóa
   const [selectedIds, setSelectedIds] = useState([]);
-  const [selectAllGlobal, setSelectAllGlobal] = useState(false);
+  const [selectAll, setSelectAll] = useState(false);
 
-  // Modal
+  // Modal & Form
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState(null);
-  const [addForm, setAddForm] = useState({
-    name: '', type: '', status: 'Đang hoạt động', illustration: null, prompt: '', usePrompt: false
-  });
-  const [editForm, setEditForm] = useState({
-    name: '', type: '', status: 'Đang hoạt động', illustration: null, prompt: '', usePrompt: false
+
+  // Form State
+  // mode: 'upload' (tải ảnh từ máy) | 'generate' (nhập prompt tạo ảnh)
+  const [formData, setFormData] = useState({
+    name: '', topic: '', type: 'swap', status: 'Đang hoạt động',
+    illustration: null, // File object (sẽ gửi lên server)
+    prompt: '', 
+    mode: 'upload',
+    previewUrl: null, // Để hiển thị ảnh preview
+    isGenerating: false // Loading khi đang tạo ảnh
   });
 
-  const itemsPerPage = 10;
   const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
   const filterWrapperRef = useRef(null);
 
-  const fetchTopics = async (page = 1) => {
+  // 1. LẤY DỮ LIỆU (GET ALL)
+  const fetchAllTopics = async () => {
     if (!id_admin) return;
     setLoading(true);
     try {
-      let url = `${API_URL}/ai-topics?id_admin=${id_admin}&page=${page}&limit=${itemsPerPage}`;
-      if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
-      if (filterName && filterName !== 'all') url += `&filter_name=${encodeURIComponent(filterName)}`;
-
-      const res = await fetch(url);
+      // Backend chỉ trả về tất cả data, không filter
+      const res = await fetch(`${API_URL}/ai-topics?id_admin=${id_admin}`);
       const data = await res.json();
+      
       if (data.status === 'success') {
-        setTopics(data.data || []);
-        setUniqueNames(data.unique_names || []);
-        setTotalPages(data.total_pages || 1);
-        setTotalTopics(data.total || 0);
-        setCurrentPage(page);
+        const topics = data.data || [];
+        setAllTopics(topics);
 
-        // Cập nhật checkbox khi có chọn toàn cục
-        if (selectAllGlobal) {
-          const currentIds = data.data.map(t => t.id);
-          setSelectedIds(prev => [...new Set([...prev, ...currentIds])]);
-        }
+        // Trích xuất danh sách Topic duy nhất để làm bộ lọc
+        const uTopics = [...new Set(topics.map(t => t.topic).filter(Boolean))].sort();
+        setUniqueTopics(uTopics);
       }
     } catch (err) {
-      alert('Lỗi tải chủ đề AI!');
+      console.error(err);
+      alert('Lỗi kết nối!');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (id_admin) fetchTopics(1);
+    fetchAllTopics();
   }, [id_admin]);
 
+  // 2. XỬ LÝ LỌC & PHÂN TRANG (CLIENT SIDE)
   useEffect(() => {
-    const timer = setTimeout(() => fetchTopics(1), 400);
-    return () => clearTimeout(timer);
-  }, [searchTerm, filterName]);
+    let result = [...allTopics];
 
-  // Click outside filter
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (filterWrapperRef.current && !filterWrapperRef.current.contains(e.target)) {
-        filterWrapperRef.current.querySelector('.aitopic-filter-menu')?.classList.remove('show');
+    // a. Tìm kiếm
+    if (searchTerm) {
+      const lowerSearch = searchTerm.toLowerCase();
+      result = result.filter(t => 
+        (t.name && t.name.toLowerCase().includes(lowerSearch)) ||
+        (t.topic && t.topic.toLowerCase().includes(lowerSearch))
+      );
+    }
+
+    // b. Lọc theo Topic
+    if (filterTopic && filterTopic !== 'all') {
+      result = result.filter(t => t.topic === filterTopic);
+    }
+
+    // c. Tính toán phân trang
+    setTotalItems(result.length);
+    const totalPg = Math.ceil(result.length / itemsPerPage) || 1;
+    setTotalPages(totalPg);
+    
+    // Reset về trang 1 nếu search thay đổi mà trang hiện tại vượt quá
+    if (currentPage > totalPg) setCurrentPage(1);
+
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedData = result.slice(startIndex, startIndex + itemsPerPage);
+    
+    setDisplayedTopics(paginatedData);
+    
+    // Reset checkbox khi data thay đổi (để an toàn)
+    // setSelectAll(false);
+    // setSelectedIds([]); 
+
+  }, [allTopics, searchTerm, filterTopic, currentPage]);
+
+
+// 3. HÀM TẠO ẢNH TỪ PROMPT (ĐÃ SỬA)
+  const handleGenerateImage = async () => {
+    if (!formData.prompt) return alert("Vui lòng nhập prompt!");
+    
+    setFormData(prev => ({ ...prev, isGenerating: true }));
+    try {
+      // Gọi Bridge Server (Localhost:5000)
+      const res = await fetch('http://localhost:5000/admin-generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: formData.prompt })
+      });
+      
+      const data = await res.json();
+      
+      if (!data.success) {
+          throw new Error(data.error || "Lỗi server");
       }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
-  const handlePageChange = (page) => {
-    if (page >= 1 && page <= totalPages) fetchTopics(page);
+      const generatedImageBase64 = data.image; // Dạng "data:image/jpeg;base64,..."
+
+      // CHUYỂN BASE64 THÀNH FILE OBJECT ĐỂ UPLOAD LÊN DB
+      const resBlob = await fetch(generatedImageBase64);
+      const blob = await resBlob.blob();
+      const file = new File([blob], "ai_generated_admin.jpg", { type: "image/jpeg" });
+
+      setFormData(prev => ({
+        ...prev,
+        illustration: file, // Lưu file vào state để submit
+        previewUrl: generatedImageBase64, // Hiển thị UI
+        isGenerating: false
+      }));
+
+    } catch (error) {
+      console.error(error);
+      alert("Lỗi tạo ảnh: " + error.message);
+      setFormData(prev => ({ ...prev, isGenerating: false }));
+    }
+  };
+  // --- HANDLERS KHÁC ---
+  const handlePageChange = (p) => {
+    if (p >= 1 && p <= totalPages) setCurrentPage(p);
   };
 
-  // CHỌN TẤT CẢ TRÊN TẤT CẢ CÁC TRANG
-  const toggleSelectAllGlobal = async () => {
-    if (selectAllGlobal) {
+  const toggleSelectAll = () => {
+    if (selectAll) {
       setSelectedIds([]);
-      setSelectAllGlobal(false);
+      setSelectAll(false);
     } else {
-      setLoading(true);
-      try {
-        let allIds = [];
-        for (let page = 1; page <= totalPages; page++) {
-          let url = `${API_URL}/ai-topics?id_admin=${id_admin}&page=${page}&limit=1000`;
-          if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
-          if (filterName && filterName !== 'all') url += `&filter_name=${encodeURIComponent(filterName)}`;
-
-          const res = await fetch(url);
-          const data = await res.json();
-          if (data.status === 'success') {
-            allIds = allIds.concat(data.data.map(t => t.id));
-          }
-        }
-        setSelectedIds(allIds);
-        setSelectAllGlobal(true);
-        alert(`Đã chọn tất cả ${allIds.length} chủ đề!`);
-      } catch (err) {
-        alert('Lỗi khi chọn tất cả!');
-      } finally {
-        setLoading(false);
-        fetchTopics(currentPage);
-      }
+      setSelectedIds(displayedTopics.map(t => t.id));
+      setSelectAll(true);
     }
   };
 
@@ -130,115 +177,98 @@ const AiTopic = () => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
-  const handleBatchDelete = async () => {
-    if (selectedIds.length === 0) return alert('Vui lòng chọn ít nhất 1 chủ đề!');
-    if (!confirm(`Xóa vĩnh viễn ${selectedIds.length} chủ đề đã chọn?`)) return;
-
-    try {
-      await Promise.all(selectedIds.map(id => fetch(`${API_URL}/ai-topics/${id}`, { method: 'DELETE' })));
-      alert(`Đã xóa thành công ${selectedIds.length} chủ đề!`);
-      setSelectedIds([]);
-      setSelectAllGlobal(false);
-      fetchTopics(currentPage);
-    } catch (err) {
-      alert('Lỗi xóa hàng loạt!');
-    }
+  const resetForm = () => {
+    setFormData({
+      name: '', topic: '', type: 'swap', status: 'Đang hoạt động',
+      illustration: null, prompt: '', mode: 'upload', previewUrl: null, isGenerating: false
+    });
   };
 
   const openAddModal = () => {
-    setAddForm({ name: '', type: '', status: 'Đang hoạt động', illustration: null, prompt: '', usePrompt: false });
+    resetForm();
     setShowAddModal(true);
   };
 
   const openEditModal = (topic) => {
     setSelectedTopic(topic);
-    setEditForm({
+    setFormData({
       name: topic.name,
-      type: topic.type || '',
+      topic: topic.topic || '',
+      type: topic.type || 'swap',
       status: topic.status,
-      illustration: null,
-      prompt: topic.is_prompt ? topic.illustration : '',
-      usePrompt: topic.is_prompt
+      illustration: null, // Reset file vì ta chưa chọn file mới
+      prompt: topic.prompt || '',
+      mode: topic.prompt ? 'generate' : 'upload', // Nếu có prompt cũ thì default tab prompt
+      previewUrl: topic.illustration, // Hiển thị ảnh cũ
+      isGenerating: false
     });
     setShowEditModal(true);
   };
 
-  const handleAddSubmit = async (e) => {
+  const handleSubmit = async (e, isUpdate = false) => {
     e.preventDefault();
-    if (!addForm.name) return alert('Tên chủ đề không được để trống!');
-
-    const formData = new FormData();
-    formData.append('id_admin', id_admin);
-    formData.append('name', addForm.name);
-    formData.append('type', addForm.type);
-    formData.append('status', addForm.status);
-
-    if (addForm.usePrompt && addForm.prompt) {
-      formData.append('prompt', addForm.prompt);
-    } else if (addForm.illustration) {
-      formData.append('illustration', addForm.illustration);
+    
+    // Nếu đang mode upload mà chưa có ảnh (và là thêm mới)
+    if (!isUpdate && formData.mode === 'upload' && !formData.illustration) {
+        return alert("Vui lòng chọn ảnh!");
+    }
+    // Nếu đang mode generate mà chưa tạo ảnh
+    if (formData.mode === 'generate' && !formData.illustration && !isUpdate) {
+        return alert("Vui lòng nhấn 'Tạo ảnh' trước khi lưu!");
     }
 
+    const payload = new FormData();
+    if (isUpdate) payload.append('_method', 'PUT');
+    
+    payload.append('id_admin', id_admin);
+    payload.append('name', formData.name);
+    payload.append('topic', formData.topic);
+    payload.append('type', formData.type);
+    payload.append('status', formData.status);
+    
+    // Gửi prompt nếu có
+    if (formData.prompt) payload.append('prompt', formData.prompt);
+
+    // Gửi file ảnh (nếu có: user upload hoặc AI generate xong đã convert thành file)
+    if (formData.illustration) {
+        payload.append('illustration', formData.illustration);
+    }
+
+    const url = isUpdate ? `${API_URL}/ai-topics/${selectedTopic.id}` : `${API_URL}/ai-topics`;
+
     try {
-      const res = await fetch(`${API_URL}/ai-topics`, { method: 'POST', body: formData });
+      const res = await fetch(url, { method: 'POST', body: payload });
       const result = await res.json();
-      alert(result.message || 'Thêm thành công!');
-      setShowAddModal(false);
-      fetchTopics(currentPage);
+      
+      if (result.status === 'success') {
+        alert(result.message);
+        setShowAddModal(false);
+        setShowEditModal(false);
+        fetchAllTopics(); // Reload lại toàn bộ list
+      } else {
+        alert(result.message || 'Lỗi xảy ra');
+      }
     } catch (err) {
       alert('Lỗi mạng!');
     }
   };
 
-  const handleEditSubmit = async (e) => {
-    e.preventDefault();
-
-    const formData = new FormData();
-    formData.append('_method', 'PUT');
-    if (editForm.name !== selectedTopic.name) formData.append('name', editForm.name);
-    if (editForm.type !== (selectedTopic.type || '')) formData.append('type', editForm.type);
-    if (editForm.status !== selectedTopic.status) formData.append('status', editForm.status);
-
-    if (editForm.usePrompt && editForm.prompt) {
-      formData.append('prompt', editForm.prompt);
-    } else if (editForm.illustration) {
-      formData.append('illustration', editForm.illustration);
-    }
-
+  const handleDeleteBatch = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Xóa ${selectedIds.length} mục?`)) return;
+    
     try {
-      const res = await fetch(`${API_URL}/ai-topics/${selectedTopic.id}`, { method: 'POST', body: formData });
-      const result = await res.json();
-      alert(result.message || 'Cập nhật thành công!');
-      setShowEditModal(false);
-      fetchTopics(currentPage);
-    } catch (err) {
-      alert('Lỗi!');
-    }
+      await Promise.all(selectedIds.map(id => fetch(`${API_URL}/ai-topics/${id}`, { method: 'DELETE' })));
+      setSelectedIds([]);
+      setSelectAll(false);
+      fetchAllTopics();
+    } catch (e) { alert('Lỗi xóa'); }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Xóa vĩnh viễn chủ đề này?')) return;
-
-    try {
-      await fetch(`${API_URL}/ai-topics/${id}`, { method: 'DELETE' });
-      alert('Xóa thành công!');
-      fetchTopics(currentPage);
-    } catch (err) {
-      alert('Lỗi xóa!');
-    }
-  };
-
-  const closeAllModals = () => {
-    setShowAddModal(false);
-    setShowEditModal(false);
-    setSelectedTopic(null);
-  };
-
-  const isCurrentPageFullySelected = topics.length > 0 && topics.every(t => selectedIds.includes(t.id));
-
+  // --- RENDER ---
   return (
     <div className="aitopic-root">
-      <Navbar sidebarCollapsed={sidebarCollapsed} onToggleSidebar={() => setSidebarCollapsed(prev => !prev)} id={id_admin} username={adminName} />
+      <Navbar sidebarCollapsed={sidebarCollapsed} onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)} id={id_admin} username={adminName} />
 
       <div className="aitopic-scroll-container">
         <div className={`aitopic-container ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
@@ -248,16 +278,16 @@ const AiTopic = () => {
 
           <div className="aitopic-controls">
             <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-              <button className="btn-pink" onClick={openAddModal}><i className="bi bi-plus-lg"></i>Thêm chủ đề AI</button>
-              <button className={`btn-pink batch-delete-btn ${selectedIds.length === 0 ? 'disabled' : ''}`} onClick={handleBatchDelete}>
-                Xóa {selectedIds.length > 0 ? selectedIds.length : 'nhiều chủ đề AI'}
+              <button className="btn-pink" onClick={openAddModal}><i className="bi bi-plus-lg"></i> Thêm mới</button>
+              <button className={`btn-pink batch-delete-btn ${selectedIds.length === 0 ? 'disabled' : ''}`} onClick={handleDeleteBatch}>
+                Xóa {selectedIds.length} mục
               </button>
             </div>
 
             <div className="searchFillter">
               <div className="aitopic-search">
                 <i className="bi bi-search"></i>
-                <input type="text" placeholder="Tìm tên hoặc loại..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                <input type="text" placeholder="Tìm kiếm..." value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} />
               </div>
 
               <div className="aitopic-filter-wrapper" ref={filterWrapperRef}>
@@ -265,9 +295,9 @@ const AiTopic = () => {
                   <i className="bi bi-funnel"></i>
                 </button>
                 <div className="aitopic-filter-menu">
-                  <button className={!filterName ? 'active' : ''} onClick={() => setFilterName('')}>Tất cả tên</button>
-                  {uniqueNames.map(n => (
-                    <button key={n} className={filterName === n ? 'active' : ''} onClick={() => setFilterName(n)}>{n}</button>
+                  <button className={!filterTopic ? 'active' : ''} onClick={() => setFilterTopic('')}>Tất cả</button>
+                  {uniqueTopics.map(n => (
+                    <button key={n} className={filterTopic === n ? 'active' : ''} onClick={() => setFilterTopic(n)}>{n}</button>
                   ))}
                 </div>
               </div>
@@ -278,159 +308,134 @@ const AiTopic = () => {
             <table className="aitopic-table">
               <thead>
                 <tr>
-                  <th style={{ width: '50px', textAlign: 'center' }}>
-                    <input type="checkbox" checked={selectAllGlobal || isCurrentPageFullySelected} onChange={toggleSelectAllGlobal} className="custom-checkbox" title={selectAllGlobal ? "Bỏ chọn tất cả" : "Chọn tất cả chủ đề"} />
-                  </th>
+                  <th style={{width:'40px'}}><input type="checkbox" checked={selectAll} onChange={toggleSelectAll} /></th>
                   <th>STT</th>
                   <th>TÊN</th>
-                  <th>CHỦ ĐỀ</th>
-                  <th style={{ textAlign: 'center' }}>MINH HỌA</th>
-                  <th style={{ textAlign: 'center' }}>TRẠNG THÁI</th>
-                  <th style={{ textAlign: 'center' }}>HÀNH ĐỘNG</th>
+                  <th>TOPIC</th>
+                  <th>LOẠI</th>
+                  <th style={{textAlign:'center'}}>MINH HỌA</th>
+                  <th style={{textAlign:'center'}}>TRẠNG THÁI</th>
+                  <th style={{textAlign:'center'}}>HÀNH ĐỘNG</th>
                 </tr>
               </thead>
               <tbody>
-                {loading ? (
-                  <tr><td colSpan="7" style={{ textAlign: 'center' }}>Đang tải...</td></tr>
-                ) : topics.length === 0 ? (
-                  <tr><td colSpan="7" style={{ textAlign: 'center' }}>Chưa có chủ đề AI</td></tr>
-                ) : (
-                  topics.map((t, i) => (
-                    <tr key={t.id} className={selectedIds.includes(t.id) ? 'selected-row' : ''}>
-                      <td style={{ textAlign: 'center' }}>
-                        <input type="checkbox" checked={selectedIds.includes(t.id)} onChange={() => toggleSelectId(t.id)} className="custom-checkbox" />
-                      </td>
-                      <td>{(currentPage - 1) * 10 + i + 1}</td>
-                      <td>{t.name}</td>
-                      <td>{t.type || '—'}</td>
-                      <td style={{ textAlign: 'center', padding: '12px 0' }}>
-                        {t.is_prompt ? (
-                          <span style={{ color: '#d81b60', fontWeight: '600', fontSize: '13px', padding: '8px 12px', background: '#fce4ec', borderRadius: '8px' }}>Prompt</span>
-                        ) : t.illustration ? (
-                          <img src={t.illustration} alt="ill" className="aitopic-thumb" />
-                        ) : '—'}
-                      </td>
-                      <td style={{ textAlign: 'center' }}>{t.status}</td>
-                      <td className="aitopic-actions" style={{ textAlign: 'center' }}>
-                        <button onClick={() => openEditModal(t)} className="edit-btn"><i className="bi bi-pencil"></i></button>
-                        <button onClick={() => handleDelete(t.id)} className="delete-btn"><i className="bi bi-trash"></i></button>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                {loading ? <tr><td colSpan="8" className="text-center">Đang tải...</td></tr> : 
+                 displayedTopics.length === 0 ? <tr><td colSpan="8" className="text-center">Không tìm thấy dữ liệu</td></tr> :
+                 displayedTopics.map((t, i) => (
+                   <tr key={t.id} className={selectedIds.includes(t.id) ? 'selected-row' : ''}>
+                     <td><input type="checkbox" checked={selectedIds.includes(t.id)} onChange={() => toggleSelectId(t.id)} /></td>
+                     <td>{(currentPage - 1) * itemsPerPage + i + 1}</td>
+                     <td>
+                        <div style={{fontWeight:'bold'}}>{t.name}</div>
+                        {t.prompt && <small style={{color:'#666', fontSize:'11px'}}>Prompt: {t.prompt.substring(0, 20)}...</small>}
+                     </td>
+                     <td>{t.topic}</td>
+                     <td><span className={`badge badge-${t.type}`}>{t.type}</span></td>
+                     <td style={{textAlign:'center'}}>
+                        {t.illustration && <img src={t.illustration} alt="" className="aitopic-thumb" />}
+                     </td>
+                     <td style={{textAlign:'center'}}>{t.status}</td>
+                     <td className='stickerpro-actions'>
+                       <button className="edit-btn" onClick={() => openEditModal(t)}><i className="bi bi-pencil"></i></button>
+                       <button className="delete-btn" onClick={async() => { if(confirm('Xóa?')) { await fetch(`${API_URL}/ai-topics/${t.id}`, {method:'DELETE'}); fetchAllTopics(); } }}><i className="bi bi-trash"></i></button>
+                     </td>
+                   </tr>
+                 ))
+                }
               </tbody>
             </table>
           </div>
 
+          {/* PHÂN TRANG UI */}
           <div className="aitopic-pagination">
-            <span>Hiển thị {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, totalTopics)} trên {totalTopics} chủ đề</span>
-            <div className="pagination-buttons">
-              <button onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}>«</button>
-              {[...Array(totalPages)].map((_, i) => (
-                <button key={i + 1} onClick={() => handlePageChange(i + 1)} className={currentPage === i + 1 ? 'active' : ''}>{i + 1}</button>
-              ))}
-              <button onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages}>»</button>
-            </div>
+             <span>Tổng: {totalItems} Hiệu ứng</span>
+             <div className="pagination-buttons">
+               <button disabled={currentPage===1} onClick={()=>handlePageChange(currentPage-1)}>«</button>
+               {Array.from({length: totalPages}, (_, i) => i + 1).map(p => (
+                 <button key={p} className={currentPage===p?'active':''} onClick={()=>handlePageChange(p)}>{p}</button>
+               ))}
+               <button disabled={currentPage===totalPages} onClick={()=>handlePageChange(currentPage+1)}>»</button>
+             </div>
           </div>
         </div>
       </div>
 
-      {/* ==================== MODAL THÊM ==================== */}
-      {showAddModal && (
-        <div className="aitopic-modal-overlay" onClick={closeAllModals}>
+      {/* MODAL FORM (Dùng chung cho Add và Edit chỉ đổi tiêu đề/hàm submit) */}
+      {(showAddModal || showEditModal) && (
+        <div className="aitopic-modal-overlay" onClick={() => { setShowAddModal(false); setShowEditModal(false); }}>
           <div className="aitopic-modal-content" onClick={e => e.stopPropagation()}>
-            <h3>Thêm chủ đề AI mới</h3>
-            <form onSubmit={handleAddSubmit}>
+            <h3>{showAddModal ? 'Thêm Mới' : 'Cập Nhật'}</h3>
+            <form onSubmit={e => handleSubmit(e, showEditModal)}>
               <div className="form-group">
-                <label>Tên chủ đề <span style={{color:'red'}}>*</span></label>
-                <input type="text" value={addForm.name} onChange={e => setAddForm(prev => ({...prev, name: e.target.value}))} required />
+                <label>Tên hiệu ứng</label>
+                <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
               </div>
+              <div className="form-row" style={{display:'flex', gap:'10px'}}>
+                  <div className="form-group" style={{flex:1}}>
+                    <label>Topic</label>
+                    <input type="text" value={formData.topic} onChange={e => setFormData({...formData, topic: e.target.value})} />
+                  </div>
+                  <div className="form-group" style={{flex:1}}>
+                    <label>Type</label>
+                    <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})}>
+                      <option value="swap">Swap Face</option>
+                      <option value="background">Background</option>
+                    </select>
+                  </div>
+              </div>
+
               <div className="form-group">
-                <label>Loại / Chủ đề</label>
-                <input type="text" placeholder="VD: Phim ảnh, Halloween..." value={addForm.type} onChange={e => setAddForm(prev => ({...prev, type: e.target.value}))} />
+                <label>Hình ảnh</label>
+                <div style={{display:'flex', gap:'15px', marginBottom:'10px'}}>
+                   <label><input type="radio" checked={formData.mode === 'upload'} onChange={() => setFormData({...formData, mode: 'upload'})} /> Tải lên</label>
+                   <label><input type="radio" checked={formData.mode === 'generate'} onChange={() => setFormData({...formData, mode: 'generate'})} /> AI Generate</label>
+                </div>
+
+                {formData.mode === 'upload' ? (
+                   <input type="file" onChange={e => {
+                       if(e.target.files[0]) {
+                           setFormData({
+                               ...formData, 
+                               illustration: e.target.files[0], 
+                               previewUrl: URL.createObjectURL(e.target.files[0]),
+                               prompt: '' // Clear prompt nếu chọn upload
+                           });
+                       }
+                   }} />
+                ) : (
+                   <div>
+                       <textarea placeholder="Nhập prompt..." rows="3" value={formData.prompt} onChange={e => setFormData({...formData, prompt: e.target.value})} />
+                       <button type="button" className="btn-pink" style={{marginTop:'5px', width:'100%'}} onClick={handleGenerateImage} disabled={formData.isGenerating}>
+                           {formData.isGenerating ? 'Đang tạo...' : 'Tạo ảnh ngay'}
+                       </button>
+                   </div>
+                )}
+
+                {/* Preview Ảnh */}
+                {formData.previewUrl && (
+                    <div style={{marginTop:'10px', textAlign:'center'}}>
+                        <img src={formData.previewUrl} alt="Preview" style={{maxHeight:'150px', borderRadius:'8px', border:'1px solid #ddd'}} />
+                    </div>
+                )}
               </div>
+
               <div className="form-group">
                 <label>Trạng thái</label>
-                <select value={addForm.status} onChange={e => setAddForm(prev => ({...prev, status: e.target.value}))}>
+                <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})}>
                   <option>Đang hoạt động</option>
                   <option>Không hoạt động</option>
                 </select>
               </div>
-              <div className="form-group">
-                <label>Minh họa</label>
-                <div style={{display:'flex', gap:'20px', marginTop:'10px'}}>
-                  <label style={{cursor:'pointer'}}>
-                    <input type="radio" checked={!addForm.usePrompt} onChange={() => setAddForm(prev => ({...prev, usePrompt: false, prompt: ''}))} />
-                    <span style={{marginLeft:'8px'}}>Tải lên ảnh minh họa</span>
-                  </label>
-                  <label style={{cursor:'pointer'}}>
-                    <input type="radio" checked={addForm.usePrompt} onChange={() => setAddForm(prev => ({...prev, usePrompt: true, illustration: null}))} />
-                    <span style={{marginLeft:'8px'}}>Nhập Prompt</span>
-                  </label>
-                </div>
-                {!addForm.usePrompt ? (
-                  <input type="file" accept="image/*" onChange={e => e.target.files[0] && setAddForm(prev => ({...prev, illustration: e.target.files[0]}))} />
-                ) : (
-                  <textarea rows="6" placeholder="Nhập prompt chi tiết để AI tạo hình theo chủ đề..." value={addForm.prompt} onChange={e => setAddForm(prev => ({...prev, prompt: e.target.value}))} />
-                )}
-                {addForm.illustration && <small style={{color:'#d81b60'}}>Đã chọn: {addForm.illustration.name}</small>}
-              </div>
+
               <div className="modal-buttons">
-                <button type="button" onClick={closeAllModals} className="cancel">Hủy</button>
-                <button type="submit" className="submit">Thêm chủ đề</button>
+                 <button type="button" className="cancel" onClick={() => { setShowAddModal(false); setShowEditModal(false); }}>Hủy</button>
+                 <button type="submit" className="submit" disabled={formData.isGenerating}>Lưu</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* ==================== MODAL SỬA ==================== */}
-      {showEditModal && selectedTopic && (
-        <div className="aitopic-modal-overlay" onClick={closeAllModals}>
-          <div className="aitopic-modal-content" onClick={e => e.stopPropagation()}>
-            <h3>Sửa chủ đề AI</h3>
-            <form onSubmit={handleEditSubmit}>
-              <div className="form-group">
-                <label>Tên chủ đề</label>
-                <input type="text" value={editForm.name} onChange={e => setEditForm(prev => ({...prev, name: e.target.value}))} required />
-              </div>
-              <div className="form-group">
-                <label>Loại / Chủ đề</label>
-                <input type="text" value={editForm.type} onChange={e => setEditForm(prev => ({...prev, type: e.target.value}))} />
-              </div>
-              <div className="form-group">
-                <label>Trạng thái</label>
-                <select value={editForm.status} onChange={e => setEditForm(prev => ({...prev, status: e.target.value}))}>
-                  <option>Đang hoạt động</option>
-                  <option>Không hoạt động</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Minh họa</label>
-                <div style={{display:'flex', gap:'20px', marginBottom:'10px'}}>
-                  <label style={{cursor:'pointer'}}>
-                    <input type="radio" checked={!editForm.usePrompt} onChange={() => setEditForm(prev => ({...prev, usePrompt: false, prompt: ''}))} />
-                    <span style={{marginLeft:'8px'}}>Thay ảnh mới</span>
-                  </label>
-                  <label style={{cursor:'pointer'}}>
-                    <input type="radio" checked={editForm.usePrompt} onChange={() => setEditForm(prev => ({...prev, usePrompt: true, illustration: null}))} />
-                    <span style={{marginLeft:'8px'}}>Dùng Prompt</span>
-                  </label>
-                </div>
-                {!editForm.usePrompt ? (
-                  <input type="file" accept="image/*" onChange={e => e.target.files[0] && setEditForm(prev => ({...prev, illustration: e.target.files[0]}))} />
-                ) : (
-                  <textarea rows="6" value={editForm.prompt} onChange={e => setEditForm(prev => ({...prev, prompt: e.target.value}))} />
-                )}
-              </div>
-              <div className="modal-buttons">
-                <button type="button" onClick={closeAllModals} className="cancel">Hủy</button>
-                <button type="submit" className="submit">Cập nhật</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

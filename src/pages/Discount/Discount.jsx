@@ -9,40 +9,38 @@ function Discount() {
   const location = useLocation();
   const { price, size, cut } = location.state || {};
 
-  //Lấy thông tin từ auth
+  // Lấy thông tin từ auth
   const getAuth = () => {
     const saved = localStorage.getItem('auth');
     return saved ? JSON.parse(saved) : null;
   };
 
   const [auth, setAuth] = useState(getAuth());
+  const { id, id_admin } = auth || {};
 
-  const { id,id_admin } = auth;
-
-  // Sử dụng number cho depositAmount để dễ tính toán
   const [depositAmount, setDepositAmount] = useState(0);
   const [discountCode, setDiscountCode] = useState('');
   const [discountValue, setDiscountValue] = useState(0);
   const [availableDiscounts, setAvailableDiscounts] = useState([]);
-  const [focusedField, setFocusedField] = useState('');
+  const [discountError, setDiscountError] = useState(''); // 👈 Thêm state lỗi
 
   const { initializeCountdown } = useCountdown();
+  const discountInputRef = useRef(null);
 
   // ✅ Áp dụng background từ localStorage nếu có
-useEffect(() => {
-  const savedBackground = localStorage.getItem('backgroundImage');
-  if (savedBackground) {
-    document.body.style.backgroundImage = `url(${savedBackground})`;
-    document.body.style.backgroundSize = 'cover';
-    document.body.style.backgroundRepeat = 'no-repeat';
-    document.body.style.backgroundAttachment = 'fixed';
-  }
+  useEffect(() => {
+    const savedBackground = localStorage.getItem('backgroundImage');
+    if (savedBackground) {
+      document.body.style.backgroundImage = `url(${savedBackground})`;
+      document.body.style.backgroundSize = 'cover';
+      document.body.style.backgroundRepeat = 'no-repeat';
+      document.body.style.backgroundAttachment = 'fixed';
+    }
 
-  // Cleanup khi rời khỏi trang
-  return () => {
-    document.body.style.backgroundImage = 'none';
-  };
-}, []);
+    return () => {
+      document.body.style.backgroundImage = 'none';
+    };
+  }, []);
 
   // ✅ Gọi initialize khi vào Discount
   useEffect(() => {
@@ -51,9 +49,7 @@ useEffect(() => {
     }
   }, [id_admin, initializeCountdown]);
 
-  const discountInputRef = useRef(null);
-
-  // Kết nối tới WebSocket backend để nhận tiền từ server.js
+  // Kết nối WebSocket để nhận tiền
   useEffect(() => {
     const ws = new WebSocket('ws://localhost:8088');
 
@@ -79,47 +75,59 @@ useEffect(() => {
     return () => ws.close();
   }, []);
 
-  // Lấy danh sách mã giảm giá từ server
-useEffect(() => {
-  const fetchDiscounts = async () => {
-    try {
-      // 🔥 Gửi id_admin qua query string
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/discounts?id_admin=${id_admin}`);
-      const data = await response.json();
-      setAvailableDiscounts(data);
-    } catch (error) {
-      console.error("❌ Không thể tải mã giảm giá:", error);
-    }
-  };
-  fetchDiscounts();
-}, []);
+  // Lấy danh sách mã giảm giá
+  useEffect(() => {
+    const fetchDiscounts = async () => {
+      if (!id_admin) return;
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/discounts?id_admin=${id_admin}`);
+        const data = await response.json();
+        setAvailableDiscounts(data);
+      } catch (error) {
+        console.error("❌ Không thể tải mã giảm giá:", error);
+      }
+    };
+    fetchDiscounts();
+  }, [id_admin]);
 
   const parsePrice = (priceString) => {
     if (!priceString) return 0;
     return parseInt(priceString.replace(/\D/g, ''), 10);
   };
 
-  // Giữ lại logic nhập mã giảm giá nếu cần
+  // ✅ Xử lý nhấn số trên bàn phím ảo
   const handleKeyPress = (value) => {
-    if (focusedField === 'discountCode') {
-      setDiscountCode(prev => prev + value);
-    }
-  };
-
-  const handleBackspace = () => {
-    if (focusedField === 'discountCode') {
-      setDiscountCode(prev => prev.slice(0, -1));
-    }
-  };
-
-  const handleApplyDiscount = async () => {
-    if (!discountCode.trim()) {
-      alert('Vui lòng nhập mã giảm giá!');
+    if (discountCode.length >= 8) {
+      setDiscountError('Mã giảm giá chỉ có 8 kí tự');
       return;
     }
-  
+    setDiscountCode(prev => prev + value);
+    if (discountError) setDiscountError('');
+  };
+
+  // ✅ Xử lý xóa ký tự
+  const handleBackspace = () => {
+    if (discountCode.length > 0) {
+      setDiscountCode(prev => prev.slice(0, -1));
+      if (discountError) setDiscountError('');
+    }
+  };
+
+  // ✅ Áp dụng mã giảm giá
+  const handleApplyDiscount = async () => {
+    setDiscountError(''); // Reset lỗi
+
+    if (!discountCode.trim()) {
+      setDiscountError('Vui lòng nhập mã giảm giá!');
+      return;
+    }
+
+    if (discountCode.length !== 8) {
+      setDiscountError('Mã giảm giá phải có đúng 8 kí tự!');
+      return;
+    }
+
     try {
-      // Gọi API để kiểm tra mã giảm giá mà không tăng count_quantity
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/discounts/check`, {
         method: 'POST',
         headers: {
@@ -127,50 +135,46 @@ useEffect(() => {
         },
         body: JSON.stringify({ 
           code: discountCode,
-          id_admin: id_admin, // Thay đổi id_admin theo yêu cầu
+          id_admin,
         })
       });
-      
+
       const result = await response.json();
-      
+
       if (result.status === 'success') {
         setDiscountValue(result.value);
-        console.log(`✅ Đã áp dụng mã giảm giá: ${discountCode}`);
-        
-        // Kiểm tra xem sau khi áp dụng giảm giá, số tiền cần nạp có bằng 0 không
         const requiredAfterDiscount = parsePrice(price) - result.value;
         if (requiredAfterDiscount <= 0) {
-          // Nếu số tiền cần nạp sau giảm giá <= 0, thực hiện lưu thông tin thanh toán và chuyển trang
           const success = await submitPaymentData(result.value);
           if (success) {
             navigate('/Beframe', { state: { size, cut } });
           }
         }
       } else {
-        // Hiển thị thông báo lỗi
-        alert(result.message || 'Không thể áp dụng mã giảm giá!');
+        setDiscountError(result.message || 'Không thể áp dụng mã giảm giá!');
         setDiscountCode('');
         setDiscountValue(0);
       }
     } catch (error) {
       console.error('❌ Lỗi khi áp dụng mã giảm giá:', error);
-      alert('Có lỗi xảy ra khi áp dụng mã giảm giá');
+      setDiscountError('Có lỗi xảy ra khi áp dụng mã giảm giá');
       setDiscountCode('');
       setDiscountValue(0);
     }
   };
 
-  // Tính số tiền cần nạp sau giảm giá
-  const requiredAmount = parsePrice(price) - discountValue;
-  const currentDeposit = depositAmount;
-
-  // Hàm gửi dữ liệu thanh toán lên server
+  // Gửi dữ liệu thanh toán
   const submitPaymentData = async (discountValueToUse = discountValue) => {
+    if (!id || !id_admin) {
+      alert('Thiếu thông tin người dùng.');
+      return false;
+    }
+
     try {
       const currentDate = new Date().toISOString().split('T')[0];
       const paymentData = {
         price: parsePrice(price),
-        id_admin: id_admin,
+        id_admin,
         id_client: id,
         cuts: cut,
         date: currentDate,
@@ -181,9 +185,7 @@ useEffect(() => {
 
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/pays`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(paymentData)
       });
 
@@ -194,33 +196,24 @@ useEffect(() => {
 
       const result = await response.json();
       console.log('Payment data submitted successfully:', result);
-      
-      // Nếu có sử dụng mã giảm giá, cập nhật count_quantity
+
+      // Cập nhật count_quantity nếu dùng mã giảm giá
       if (discountCode && discountValueToUse > 0) {
         try {
           const discountResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/discounts/use`, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
-              code: discountCode,
-              id_admin: paymentData.id_admin  // Sử dụng cùng id_admin với thanh toán
-            })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: discountCode, id_admin })
           });
-          
           const discountResult = await discountResponse.json();
-          
           if (discountResult.status !== 'success') {
             console.warn('Cảnh báo khi cập nhật mã giảm giá:', discountResult.message);
-            // Không dừng luồng xử lý nếu cập nhật discount thất bại
           }
         } catch (discountError) {
           console.error('Lỗi khi cập nhật số lượng sử dụng mã giảm giá:', discountError);
-          // Không dừng luồng xử lý nếu cập nhật discount thất bại
         }
       }
-      
+
       return true;
     } catch (error) {
       console.error('Error submitting payment data:', error);
@@ -229,7 +222,10 @@ useEffect(() => {
     }
   };
 
-  // Khi số tiền deposit đủ, điều hướng sang trang Process
+  const requiredAmount = Math.max(0, parsePrice(price) - discountValue);
+  const currentDeposit = depositAmount;
+
+  // Tự động chuyển trang khi đủ tiền
   useEffect(() => {
     if (currentDeposit >= requiredAmount && requiredAmount > 0) {
       console.log("✅ Đã nhận đủ tiền:", currentDeposit);
@@ -240,11 +236,7 @@ useEffect(() => {
           }
         });
     }
-  }, [currentDeposit, requiredAmount, navigate, size, cut]);
-
-  const handleDiscountFocus = () => {
-    setFocusedField('discountCode');
-  };
+  }, [currentDeposit, requiredAmount, navigate, size, cut, id, id_admin]);
 
   return (
     <div className="discount-container">
@@ -256,27 +248,33 @@ useEffect(() => {
             className="voucher-input"
             placeholder="Nhập mã Giảm giá..."
             value={discountCode}
-            onChange={(e) => setDiscountCode(e.target.value)}
+            onChange={(e) => {
+              let value = e.target.value.replace(/\D/g, '').slice(0, 8);
+              setDiscountCode(value);
+              if (discountError) setDiscountError('');
+            }}
             ref={discountInputRef}
-            onFocus={handleDiscountFocus}
           />
           <button className="apply-discount" onClick={handleApplyDiscount}>
             Áp dụng
           </button>
+          
         </div>
+
+        {/* 👇 Hiển thị lỗi ngay dưới ô nhập */}
+        <p className="discount-error-message">{discountError}</p>
 
         <div className="payment-info">
           <p className="amount-needed">Số tiền cần nạp vào máy: {price}</p>
           <p className="discount-applied">Giảm giá: {discountValue} VNĐ</p>
           <p className="amount-remaining">
-            Số tiền cần nạp sau giảm giá: {requiredAmount > 0 ? requiredAmount : 0} VNĐ
+            Số tiền cần nạp sau giảm giá: {requiredAmount} VNĐ
           </p>
         </div>
 
         <div className="payment-info1">
           <div className="deposit-input-wrapper">
             <p className="amount-paid">Số tiền đã nạp: {depositAmount} VNĐ</p>
-            {/* Input hiển thị số tiền nạp từ server; không cho phép người dùng chỉnh sửa */}
             <input
               type="text"
               className="deposit-input"
@@ -293,9 +291,12 @@ useEffect(() => {
       </div>
 
       <div className="keypad">
-        {/* Bàn phím ảo chỉ dùng cho nhập mã giảm giá */}
         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map(num => (
-          <button key={num} className="key" onClick={() => handleKeyPress(num)}>
+          <button
+            key={num}
+            className="key"
+            onClick={() => handleKeyPress(num.toString())}
+          >
             {num}
           </button>
         ))}

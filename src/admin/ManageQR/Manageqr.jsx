@@ -170,45 +170,52 @@ const Manageqr = () => {
   }, [id_admin]);
 
   // === LỌC & TÌM KIẾM ===
-  const filteredOrders = useMemo(() => {
-    let result = [...orders];
+const filteredOrders = useMemo(() => {
+  let result = [...orders];
 
-    // Lọc theo thời gian
-    const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  if (dateFilter === 'latest') {
+    if (result.length > 0) {
+      const latestDate = result.reduce((latest, order) => {
+        const orderDate = new Date(order.time || 0);
+        return orderDate > latest ? orderDate : latest;
+      }, new Date(0));
 
-    if (dateFilter === 'latest') {
-      if (result.length > 0) {
-        const latestDate = result.reduce((latest, order) => {
-          const orderDate = new Date(order.time || 0);
-          return orderDate > latest ? orderDate : latest;
-        }, new Date(0));
-
-        const latestDateStr = latestDate.toISOString().split('T')[0];
-        result = result.filter(order => {
-          const orderDateStr = (order.time || '').split(' ')[0];
-          return orderDateStr === latestDateStr;
-        });
-      }
-    } else if (dateFilter === 'month') {
+      const latestDateStr = latestDate.toISOString().split('T')[0];
       result = result.filter(order => {
         const orderDateStr = (order.time || '').split(' ')[0];
-        return orderDateStr.startsWith(currentMonth);
+        return orderDateStr === latestDateStr;
       });
     }
+  } else if (dateFilter === 'month') {
+    if (result.length === 0) {
+      result = [];
+    } else {
+      const latestOrder = result.reduce((prev, curr) => {
+        const prevTime = new Date(prev.time || 0);
+        const currTime = new Date(curr.time || 0);
+        return currTime > prevTime ? curr : prev;
+      });
 
-    // Tìm kiếm
-    if (searchTerm.trim()) {
-      const term = searchTerm.trim().toLowerCase();
-      result = result.filter(order =>
-        String(order.id).includes(term) ||
-        (order.discount_code || '').toLowerCase().includes(term) ||
-        (order.time || '').toLowerCase().includes(term)
-      );
+      const latestMonth = new Date(latestOrder.time).toISOString().slice(0, 7);
+      result = result.filter(order => {
+        if (!order.time) return false;
+        const orderMonth = order.time.split(' ')[0].slice(0, 7);
+        return orderMonth === latestMonth;
+      });
     }
+  }
 
-    return result;
-  }, [orders, dateFilter, searchTerm]);
+  if (searchTerm.trim()) {
+    const term = searchTerm.trim().toLowerCase();
+    result = result.filter(order =>
+      String(order.id).includes(term) ||
+      (order.discount_code || '').toLowerCase().includes(term) ||
+      (order.time || '').toLowerCase().includes(term)
+    );
+  }
 
+  return result;
+}, [orders, dateFilter, searchTerm]);
   // === PHÂN TRANG ===
   const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
   const paginatedOrders = useMemo(() => {
@@ -327,12 +334,12 @@ const Manageqr = () => {
                   >
                     Ngày gần nhất
                   </button>
-                  <button 
-                    className={dateFilter === 'month' ? 'active' : ''} 
-                    onClick={() => { setDateFilter('month'); setShowFilterMenu(false); }}
-                  >
-                    Tháng hiện tại
-                  </button>
+<button 
+  className={dateFilter === 'month' ? 'active' : ''} 
+  onClick={() => { setDateFilter('month'); setShowFilterMenu(false); }}
+>
+  Tháng gần nhất
+</button>
                 </div>
               </div>
             </div>

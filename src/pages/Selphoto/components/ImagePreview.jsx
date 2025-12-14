@@ -188,8 +188,8 @@ const ImagePreview = ({
               </div>
             </div>
           </div>
-          <div className="compare-label compare-label-original">GỐC</div>
-          <div className="compare-label compare-label-enhanced">NÉT</div>
+          <div className="compare-label compare-label-original">TRƯỚC</div>
+          <div className="compare-label compare-label-enhanced">SAU</div>
 
           {renderPreviewStickers()}
         </div>

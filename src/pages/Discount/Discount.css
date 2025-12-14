@@ -333,3 +333,22 @@
   42% { transform: scale(1.15); }
   70% { transform: scale(1); }
 }
+
+
+.discount-error-message {
+  min-height: 22px; /* hoặc 20px — đủ chỗ cho 1 dòng text */
+  color: #e74c3c;
+  font-size: 14px;
+  margin: 2px 0 0 0;
+  text-align: left;
+  transition: color 0.2s ease;
+}
+
+/* Tùy chọn: làm mờ khi không có lỗi (hoặc để trống) */
+.discount-error-message:not(:empty) {
+  opacity: 1;
+}
+.discount-error-message:empty {
+  opacity: 0;
+  /* hoặc bạn có thể để opacity: 1 và chỉ hiển thị khi có text */
+}

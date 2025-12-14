@@ -120,7 +120,7 @@ const Navbar = ({ sidebarCollapsed, onToggleSidebar }) => {
         <li>
           <a onClick={NotificationEvent} className={currentPath === '/Event' ? 'active' : ''}>
             <span className="micon bi bi-calendar-event" />
-            <span className="mtext">Quản lí background</span>
+            <span className="mtext">Quản lí sự kiện</span>
           </a>
         </li>
         <li>
@@ -138,7 +138,7 @@ const Navbar = ({ sidebarCollapsed, onToggleSidebar }) => {
         <li>
           <a onClick={NotificationContentChat} className={currentPath === '/ContentChat' ? 'active' : ''}>
             <span className="micon bi bi-chat" />
-            <span className="mtext">Quản lí Chat</span>
+            <span className="mtext">Quản lí Chatbot</span>
           </a>
         </li>
         <li>
@@ -238,16 +238,6 @@ const Navbar = ({ sidebarCollapsed, onToggleSidebar }) => {
                     <i className="bi bi-key" /> Đổi mật khẩu
                   </a>
 
-                  {/* Quên mật khẩu */}
-                  <a
-                    onClick={() => {
-                      setUserDropdownOpen(false);
-                      navigate('/ForgotPassword');
-                    }}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <i className="bi bi-question-circle" /> Quên mật khẩu?
-                  </a>
 
                   {/* Đăng xuất */}
                   <a

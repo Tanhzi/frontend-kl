@@ -21,18 +21,7 @@ function ForgotPassword() {
   const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   const navigate = useNavigate();
-  const isAuthenticated = !!JSON.parse(localStorage.getItem('auth'));
 
-  useEffect(() => {
-    const auth = JSON.parse(localStorage.getItem('auth'));
-    if (auth?.email) {
-      setEmail(auth.email);
-      setIsEmailLocked(true);
-    }
-
-    const timer = setTimeout(() => setIsLoading(false), 100);
-    return () => clearTimeout(timer);
-  }, []);
 
   const handleSendOtp = async (e) => {
     e.preventDefault();
@@ -339,7 +328,7 @@ function ForgotPassword() {
 
       <div className="auth-links">
         <button className="link-button" onClick={() => navigate(-1)}>
-          {isAuthenticated ? '← Quay lại' : '← Quay lại đăng nhập'}
+          {'← Quay lại'}
         </button>
       </div>
     </div>

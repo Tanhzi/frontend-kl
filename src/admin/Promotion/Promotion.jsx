@@ -346,42 +346,44 @@ const Promotion = () => {
                                     <th style={{ textAlign: 'center' }}>HÀNH ĐỘNG</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                {paginatedDiscounts.length > 0 ? (
-                                    paginatedDiscounts.map(d => (
-                                        <tr key={d.id} className={selectedIds.includes(d.id) ? 'selected-row' : ''}>
-                                            <td style={{ textAlign: 'center' }}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedIds.includes(d.id)}
-                                                    onChange={() => toggleSelectId(d.id)}
-                                                    className="custom-checkbox"
-                                                />
-                                            </td>
-                                            <td>{d.id}</td>
-                                            <td><strong>{d.code}</strong></td>
-                                            <td>{d.startdate}</td>
-                                            <td>{d.enddate}</td>
-                                            <td>{d.value.toLocaleString('vi-VN')}đ</td>
-                                            <td>{d.quantity}</td>
-                                            <td>{d.quantity - d.count_quantity}</td>
-                                            <td><span className={`status-${getStatus(d.startdate, d.enddate).toLowerCase().replace(/ /g, '-')}`}>
-                                                {getStatus(d.startdate, d.enddate)}
-                                            </span></td>
-                                            <td className="promotionpro-actions">
-                                                <button onClick={() => { setShowForm(true); setCurrentDiscount(d); }} className="edit-btn">
-                                                    <i className="bi bi-pencil"></i>
-                                                </button>
-                                                <button onClick={() => handleDelete(d.id)} className="delete-btn">
-                                                    <i className="bi bi-trash"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr><td colSpan="10" style={{ textAlign: 'center' }}>Không có dữ liệu.</td></tr>
-                                )}
-                            </tbody>
+<tbody>
+  {paginatedDiscounts.length > 0 ? (
+    paginatedDiscounts.map((d, index) => (
+      <tr key={d.id} className={selectedIds.includes(d.id) ? 'selected-row' : ''}>
+        <td style={{ textAlign: 'center' }}>
+          <input
+            type="checkbox"
+            checked={selectedIds.includes(d.id)}
+            onChange={() => toggleSelectId(d.id)}
+            className="custom-checkbox"
+          />
+        </td>
+        <td>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</td> {/* ← Sửa ở đây */}
+        <td><strong>{d.code}</strong></td>
+        <td>{d.startdate}</td>
+        <td>{d.enddate}</td>
+        <td>{d.value.toLocaleString('vi-VN')}đ</td>
+        <td>{d.quantity}</td>
+        <td>{d.quantity - d.count_quantity}</td>
+        <td>
+          <span className={`status-${getStatus(d.startdate, d.enddate).toLowerCase().replace(/ /g, '-')}`}>
+            {getStatus(d.startdate, d.enddate)}
+          </span>
+        </td>
+        <td className="promotionpro-actions">
+          <button onClick={() => { setShowForm(true); setCurrentDiscount(d); }} className="edit-btn">
+            <i className="bi bi-pencil"></i>
+          </button>
+          <button onClick={() => handleDelete(d.id)} className="delete-btn">
+            <i className="bi bi-trash"></i>
+          </button>
+        </td>
+      </tr>
+    ))
+  ) : (
+    <tr><td colSpan="10" style={{ textAlign: 'center' }}>Không có dữ liệu.</td></tr>
+  )}
+</tbody>
                         </table>
                     </div>
 

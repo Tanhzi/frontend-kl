@@ -12,7 +12,7 @@ const Camera = () => {
 
     const [auth, setAuth] = useState(getAuth());
     const { id: idAdmin, username } = auth || {};
-    
+
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const toggleSidebar = () => setSidebarCollapsed(!sidebarCollapsed);
 
@@ -27,15 +27,17 @@ const Camera = () => {
 
     // Fetch dữ liệu khi component mount
     useEffect(() => {
+        if (!idAdmin) return; // tránh gọi API nếu chưa có idAdmin
+
         fetch(`${import.meta.env.VITE_API_BASE_URL}/camera?id_admin=${idAdmin}`)
             .then(response => response.json())
             .then(data => {
                 setSettings({
-                    isVideoOn: data.video === 1,      // Nếu video bằng 1 => true
-                    isMirrorOn: data.mirror === 1,     // Nếu mirror bằng 1 => true
-                    timeImage1: data.time1,            // Giá trị time1
-                    timeImage2: data.time2,             // Giá trị time2
-                    timeRun: data.time_run || ''            // Giá trị time_run
+                    isVideoOn: data.video === 1,
+                    isMirrorOn: data.mirror === 1,
+                    timeImage1: data.time1 || '',
+                    timeImage2: data.time2 || '',
+                    timeRun: data.time_run || '',
                 });
             })
             .catch(error => {
@@ -43,13 +45,17 @@ const Camera = () => {
             });
     }, [idAdmin]);
 
+    // Hàm xử lý input chỉ cho nhập số
+    const handleNumberInputChange = (key) => (e) => {
+        let value = e.target.value;
+        // Chỉ giữ lại ký tự số (0–9), cho phép để trống
+        value = value.replace(/[^0-9]/g, '');
+        setSettings(prev => ({ ...prev, [key]: value }));
+    };
+
     // Hàm xử lý toggle cho checkbox "Tạo video"
     const handleToggleVideo = () => {
         setSettings(prev => ({ ...prev, isVideoOn: !prev.isVideoOn }));
-    };
-
-    const handleChangeTimeRun = (e) => {
-        setSettings(prev => ({ ...prev, timeRun: e.target.value }));
     };
 
     // Hàm xử lý toggle cho checkbox "Màn hình gương"
@@ -57,17 +63,7 @@ const Camera = () => {
         setSettings(prev => ({ ...prev, isMirrorOn: !prev.isMirrorOn }));
     };
 
-    // Hàm cập nhật ô input "Ảnh 1"
-    const handleChangeTimeImage1 = (e) => {
-        setSettings(prev => ({ ...prev, timeImage1: e.target.value }));
-    };
-
-    // Hàm cập nhật ô input "Ảnh sau"
-    const handleChangeTimeImage2 = (e) => {
-        setSettings(prev => ({ ...prev, timeImage2: e.target.value }));
-    };
-
-    // Hàm gửi dữ liệu cập nhật qua PHP để lưu vào database
+    // Hàm gửi dữ liệu cập nhật qua API
     const handleSaveChanges = () => {
         const postData = {
             id_admin: idAdmin,
@@ -75,15 +71,15 @@ const Camera = () => {
             time2: settings.timeImage2,
             video: settings.isVideoOn ? 1 : 0,
             mirror: settings.isMirrorOn ? 1 : 0,
-            time_run: settings.timeRun, // ← thêm dòng này (snake_case!)
+            time_run: settings.timeRun,
         };
 
         fetch(`${import.meta.env.VITE_API_BASE_URL}/camera`, {
-            method: 'POST', // ✅ Đổi thành POST để tránh vấn đề với PUT + form-data
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: new URLSearchParams(postData)
+            body: new URLSearchParams(postData),
         })
             .then(response => response.json())
             .then(data => {
@@ -125,18 +121,22 @@ const Camera = () => {
                                 <label>Ảnh 1</label>
                                 <input
                                     type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
                                     placeholder="Giây"
                                     value={settings.timeImage1}
-                                    onChange={handleChangeTimeImage1}
+                                    onChange={handleNumberInputChange('timeImage1')}
                                 />
                             </div>
                             <div className="camera-time-input">
                                 <label>Ảnh sau</label>
                                 <input
                                     type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
                                     placeholder="Giây"
                                     value={settings.timeImage2}
-                                    onChange={handleChangeTimeImage2}
+                                    onChange={handleNumberInputChange('timeImage2')}
                                 />
                             </div>
                         </div>
@@ -169,9 +169,11 @@ const Camera = () => {
                             <label>Thời gian chụp</label>
                             <input
                                 type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
                                 placeholder="Giây"
                                 value={settings.timeRun}
-                                onChange={handleChangeTimeRun}
+                                onChange={handleNumberInputChange('timeRun')}
                             />
                         </div>
 

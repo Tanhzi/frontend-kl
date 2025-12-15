@@ -359,46 +359,46 @@ const filteredOrders = useMemo(() => {
                     <table className="manageqr-order-table">
                       <thead>
                         <tr>
-                          <th>ID</th>
+                          <th>STT</th>
                           <th>MÃ GIẢM GIÁ</th>
                           <th>THỜI GIAN</th>
                           <th>KHUNG ẢNH</th>
                           <th>MÃ QR</th>
                         </tr>
                       </thead>
-                      <tbody>
-                        {paginatedOrders.length > 0 ? (
-                          paginatedOrders.map(order => (
-                            <tr key={order.id}>
-                              <td>{order.id}</td>
-                              <td><strong>{order.discount_code || '—'}</strong></td>
-                              <td>{order.time}</td>
-                              <td>
-                                <button
-                                  className="manageqr-btn manageqr-btn-frame"
-                                  onClick={() => handleViewFrame(order.frame_id)}
-                                  disabled={!order.frame_id}
-                                >
-                                  <FaEye />
-                                </button>
-                              </td>
-                              <td>
-                                <button
-                                  className="manageqr-btn manageqr-btn-qr"
-                                  onClick={() => handleViewQR(order.qr_id)}
-                                  disabled={!order.qr_id}
-                                >
-                                  <FaEye />
-                                </button>
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan="5" className="manageqr-no-data">Không có dữ liệu.</td>
-                          </tr>
-                        )}
-                      </tbody>
+<tbody>
+  {paginatedOrders.length > 0 ? (
+    paginatedOrders.map((order, index) => (
+      <tr key={order.id}>
+        <td>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</td> {/* ← Sửa ở đây */}
+        <td><strong>{order.discount_code || '—'}</strong></td>
+        <td>{order.time}</td>
+        <td>
+          <button
+            className="manageqr-btn manageqr-btn-frame"
+            onClick={() => handleViewFrame(order.frame_id)}
+            disabled={!order.frame_id}
+          >
+            <FaEye />
+          </button>
+        </td>
+        <td>
+          <button
+            className="manageqr-btn manageqr-btn-qr"
+            onClick={() => handleViewQR(order.qr_id)}
+            disabled={!order.qr_id}
+          >
+            <FaEye />
+          </button>
+        </td>
+      </tr>
+    ))
+  ) : (
+    <tr>
+      <td colSpan="5" className="manageqr-no-data">Không có dữ liệu.</td>
+    </tr>
+  )}
+</tbody>
                     </table>
                   </div>
 

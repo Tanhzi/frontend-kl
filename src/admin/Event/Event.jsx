@@ -654,7 +654,7 @@ const handleSaveBackgroundImage = () => {
                                             title={selectAllGlobal ? "Bỏ chọn tất cả" : "Chọn tất cả sự kiện ở mọi trang"}
                                         />
                                     </th>
-                                    <th>STT</th>
+                                    <th>ID</th>
                                     <th>TÊN</th>
                                     <th>NGÀY</th>
                                     <th>ẢNH NỀN</th>

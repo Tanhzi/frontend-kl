@@ -311,7 +311,7 @@ const AiTopic = () => {
                   <th style={{width:'40px'}}><input type="checkbox" checked={selectAll} onChange={toggleSelectAll} /></th>
                   <th>STT</th>
                   <th>TÊN</th>
-                  <th>TOPIC</th>
+                  <th>CHỦ ĐỀ</th>
                   <th>LOẠI</th>
                   <th style={{textAlign:'center'}}>MINH HỌA</th>
                   <th style={{textAlign:'center'}}>TRẠNG THÁI</th>
@@ -372,7 +372,7 @@ const AiTopic = () => {
               </div>
               <div className="form-row" style={{display:'flex', gap:'10px'}}>
                   <div className="form-group" style={{flex:1}}>
-                    <label>Topic</label>
+                    <label>Chủ đề</label>
                     <input type="text" value={formData.topic} onChange={e => setFormData({...formData, topic: e.target.value})} />
                   </div>
                   <div className="form-group" style={{flex:1}}>

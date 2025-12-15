@@ -1131,7 +1131,7 @@ setTestImage(null);
                   <div className="form-group">
                     <label>Loại cut <span style={{color:'red'}}>*</span></label>
                     <select value={form.cuts} onChange={e => updateFrameForm(form.key, 'cuts', e.target.value)} required>
-                      <option value="">Chọn</option>
+                      <option value="">Chọn loại cut</option>
                       {cutOptions.map(opt => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                       ))}
@@ -1164,7 +1164,6 @@ setTestImage(null);
           <div className="form-group">
             <label>Chủ đề sự kiện <span style={{color:'red'}}>*</span></label>
             <select value={editFormData.id_topic} onChange={e => setEditFormData(prev => ({ ...prev, id_topic: e.target.value }))} required>
-              <option value="">Chọn chủ đề</option>
               {events.map(ev => (
                 <option key={ev.id} value={ev.id}>{ev.name}</option>
               ))}
@@ -1182,7 +1181,6 @@ setTestImage(null);
           <div className="form-group">
             <label>Phân loại <span style={{color:'red'}}>*</span></label>
             <select value={editFormData.cuts} onChange={e => setEditFormData(prev => ({ ...prev, cuts: e.target.value }))} required>
-              <option value="">Chọn loại cut</option>
               {cutOptions.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}

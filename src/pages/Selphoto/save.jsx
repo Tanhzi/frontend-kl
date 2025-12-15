@@ -5,12 +5,16 @@ import { useCountdown } from "../../contexts/CountdownContext";
 import FilterSection from './components/FilterSection';
 import StickerSection from './components/StickerSection';
 import ImagePreview from './components/ImagePreview';
-import FaceSwapSection from './components/FaceSwapSection'; // Thêm dòng này
+import FaceSwapSection from './components/FaceSwapSection';
 import Chatbot from '../../components/Chatbot';
+import Lottie from 'lottie-react';
 
 const SelPhoto = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  
+  const [showWelcomeBot, setShowWelcomeBot] = useState(true);
+  const [robotLottie, setRobotLottie] = useState(null);
 
   const { photos, cut, frameType, size, selectedFrameId, selectedFrame } = location.state || {
     photos: [],
@@ -31,7 +35,9 @@ const SelPhoto = () => {
     { id: 'bright', name: 'Sáng', filter: 'brightness(120%) contrast(110%)' },
     { id: 'smooth', name: 'Mịn da', filter: 'blur(0.5px) brightness(105%) contrast(95%)' },
     { id: 'primer', name: 'Primer soda', filter: 'saturate(120%) contrast(110%) hue-rotate(10deg)' },
-    { id: 'soly', name: 'Soly', filter: 'sepia(30%) saturate(130%) brightness(110%)' }
+    { id: 'soly', name: 'Soly', filter: 'sepia(30%) saturate(130%) brightness(110%)' },
+    // 👇 THÊM DÒNG NÀY 👇
+    { id: 'anime', name: 'Anime AI', filter: 'none', isAI: true }
   ];
 
   // Khởi tạo số ô (slots) dựa theo cut
@@ -48,6 +54,7 @@ const SelPhoto = () => {
   const [appliedFilters, setAppliedFilters] = useState({});
   const [allSlotsFilled, setAllSlotsFilled] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('Đang xử lý...');
 
   // State cho original images (để compare)
   const [originalImages, setOriginalImages] = useState({});
@@ -90,6 +97,30 @@ const SelPhoto = () => {
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [selectedSwapId, setSelectedSwapId] = useState(null);   // ID template đang chọn
   const [isProcessingSwap, setIsProcessingSwap] = useState(false); // Loading khi đang swap
+
+  // Load Lottie chào mừng
+  useEffect(() => {
+    fetch('/lotties/Robotsayshello.json')
+      .then((res) => {
+        if (!res.ok) throw new Error('Không tìm thấy file Lottie');
+        return res.json();
+      })
+      .then((json) => setRobotLottie(json))
+      .catch((err) => {
+        console.error('Lỗi khi tải animation robot:', err);
+        setShowWelcomeBot(false);
+      });
+  }, []);
+
+  // Close welcome bot after animation completes
+  useEffect(() => {
+    if (robotLottie) {
+      const timer = setTimeout(() => {
+        setShowWelcomeBot(false);
+      }, 10000); // Hide after 5 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [robotLottie]);
 
   // ✅ Áp dụng background từ localStorage nếu có
   useEffect(() => {
@@ -238,7 +269,7 @@ const SelPhoto = () => {
     
     // 1. Validate: Kiểm tra đã chọn ảnh chưa
     if (!currentSlot || !currentSlot.photo) {
-      alert("Vui lòng chọn hoặc chụp ảnh trước khi Face Swap!");
+      // alert("Vui lòng chọn hoặc chụp ảnh trước khi Face Swap!");
       return;
     }
     
@@ -380,7 +411,7 @@ const SelPhoto = () => {
 
     } catch (error) {
       console.error('[FACESWAP ERROR]', error);
-      alert(`Lỗi Face Swap: ${error.message}`);
+      // alert(`Lỗi Face Swap: ${error.message}`);
       // Nếu lỗi thì bỏ chọn template để user có thể ấn lại
       setSelectedSwapId(null);
     } finally {
@@ -450,7 +481,7 @@ const SelPhoto = () => {
     
     // 1. Validate: Phải có ảnh người trước
     if (!currentSlot || !currentSlot.photo) {
-      alert("Vui lòng chọn hoặc chụp ảnh trước khi ghép nền!");
+      // alert("Vui lòng chọn hoặc chụp ảnh trước khi ghép nền!");
       return;
     }
     
@@ -552,7 +583,7 @@ const SelPhoto = () => {
 
     } catch (error) {
       console.error('[BG-AI ERROR]', error);
-      alert(`Lỗi ghép nền: ${error.message}`);
+      // alert(`Lỗi ghép nền: ${error.message}`);
       setSelectedBgId(null); // Bỏ chọn nếu lỗi
     } finally {
       setIsProcessingBg(false); // Tắt loading
@@ -951,11 +982,108 @@ const SelPhoto = () => {
     });
   };
 
-  const handleApplyFilter = (filterId) => {
-    setAppliedFilters(prev => ({
-      ...prev,
-      [selectedImageIndex]: filterId
-    }));
+// === XỬ LÝ CHỌN BỘ LỌC ===
+  const handleApplyFilter = async (filterId) => {
+    // Nếu là filter Anime (AI)
+    if (filterId === 'anime') {
+        const currentSlot = selectedSlots[selectedImageIndex];
+        // if (!currentSlot || !currentSlot.photo) return alert("Vui lòng chọn ảnh trước!");
+
+        // Kiểm tra Cache xem đã tạo anime cho ảnh này chưa
+        if (swappedCache[selectedImageIndex] && swappedCache[selectedImageIndex]['anime']) {
+            const cachedAnime = swappedCache[selectedImageIndex]['anime'];
+            
+            // Cập nhật UI từ Cache
+            const updatedSlots = [...selectedSlots];
+            updatedSlots[selectedImageIndex] = { ...updatedSlots[selectedImageIndex], photo: cachedAnime };
+            setSelectedSlots(updatedSlots);
+            setAppliedFilters(prev => ({ ...prev, [selectedImageIndex]: 'anime' }));
+            return;
+        }
+
+        // Nếu chưa có Cache -> Gọi API
+        try {
+          setLoadingMessage("Đang vẽ lại theo phong cách Anime...");
+            setLoading(true);
+            setLoading(true); // Tận dụng state loading có sẵn hoặc tạo state mới
+            
+            // 1. Chuẩn bị file
+            let fileToSend;
+            if (currentSlot.photo.startsWith('data:')) {
+                const arr = currentSlot.photo.split(',');
+                const mime = arr[0].match(/:(.*?);/)[1];
+                const bstr = atob(arr[1]);
+                let n = bstr.length;
+                const u8arr = new Uint8Array(n);
+                while(n--){ u8arr[n] = bstr.charCodeAt(n); }
+                fileToSend = new File([u8arr], "photo.jpg", {type: mime});
+            } else {
+                fileToSend = await urlToFile(currentSlot.photo, "photo.jpg", "image/jpeg");
+            }
+
+            // 2. Gửi API
+            const formData = new FormData();
+            formData.append('image', fileToSend);
+
+            console.log("Đang tạo ảnh Anime...");
+            const res = await fetch('http://localhost:5000/anime-style', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                // 3. Lưu ảnh gốc nếu chưa lưu
+                if (!originalImages[selectedImageIndex]) {
+                    setOriginalImages(prev => ({ ...prev, [selectedImageIndex]: currentSlot.photo }));
+                }
+
+                // 4. Lưu Cache Anime
+                setSwappedCache(prev => ({
+                    ...prev,
+                    [selectedImageIndex]: {
+                        ...(prev[selectedImageIndex] || {}),
+                        'anime': data.anime_image
+                    }
+                }));
+
+                // 5. Cập nhật hiển thị
+                const updatedSlots = [...selectedSlots];
+                updatedSlots[selectedImageIndex] = { ...updatedSlots[selectedImageIndex], photo: data.anime_image };
+                setSelectedSlots(updatedSlots);
+                
+                // Đánh dấu filter đang chọn là anime
+                setAppliedFilters(prev => ({ ...prev, [selectedImageIndex]: 'anime' }));
+            } else {
+                // alert("Lỗi tạo ảnh Anime: " + data.error);
+            }
+
+        } catch (error) {
+            console.error(error);
+            // /alert("Lỗi kết nối server!");
+        } finally {
+            setLoading(false);
+        }
+
+    } else {
+        // === LOGIC BỘ LỌC CSS THÔNG THƯỜNG (CŨ) ===
+        // Nếu trước đó đang ở chế độ Anime/AI, cần khôi phục ảnh gốc trước khi áp dụng CSS
+        if (appliedFilters[selectedImageIndex] === 'anime' || appliedFilters[selectedImageIndex] === 'enhanced') {
+             if (originalImages[selectedImageIndex]) {
+                 const updatedSlots = [...selectedSlots];
+                 updatedSlots[selectedImageIndex] = { 
+                     ...updatedSlots[selectedImageIndex], 
+                     photo: originalImages[selectedImageIndex] 
+                 };
+                 setSelectedSlots(updatedSlots);
+             }
+        }
+
+        setAppliedFilters(prev => ({
+            ...prev,
+            [selectedImageIndex]: filterId
+        }));
+    }
   };
 
 // === HÀM KHÔI PHỤC ẢNH GỐC (ĐÃ SỬA) ===
@@ -993,7 +1121,9 @@ const SelPhoto = () => {
   const handleEnhanceImage = async (index) => {
     const slot = selectedSlots[index];
     if (!slot) return;
-
+// 👇 THÊM 2 DÒNG NÀY VÀO ĐẦU HÀM
+    setLoadingMessage("Đang tối ưu độ nét và khử nhiễu...");
+    setLoading(true);
     setLoading(true);
 
     try {
@@ -1061,7 +1191,7 @@ const SelPhoto = () => {
         setAppliedFilters(prev => ({ ...prev, [index]: 'original' }));
 
         console.log('[SUCCESS] Image enhanced successfully');
-        alert('✅ Ảnh đã được làm nét!');
+        // alert('✅ Ảnh đã được làm nét!');
 
       } else {
         throw new Error(data.error || data.message || 'Làm nét thất bại');
@@ -1069,7 +1199,7 @@ const SelPhoto = () => {
 
     } catch (err) {
       console.error('[ERROR] Enhance failed:', err);
-      alert('❌ Lỗi làm nét ảnh: ' + (err.message || 'Không xác định'));
+      // alert('❌ Lỗi làm nét ảnh: ' + (err.message || 'Không xác định'));
     } finally {
       setLoading(false);
     }
@@ -1343,7 +1473,7 @@ const SelPhoto = () => {
         }));
 
         // HIỂN THỊ THÔNG BÁO
-        alert('⚠️ Sticker bị tràn viền! Vui lòng đặt lại sticker trong khung ảnh.');
+        // alert('⚠️ Sticker bị tràn viền! Vui lòng đặt lại sticker trong khung ảnh.');
 
         setSelectedPreviewStickerId(null);
         return;
@@ -1662,16 +1792,41 @@ const renderSlotItem = (slot, index) => {
     selectedSlots[selectedImageIndex]?.photo !== originalImages[selectedImageIndex];
   return (
     <div className="vh-100">
+      {showWelcomeBot && robotLottie && (
+            <div
+              className="welcome-bot-overlay"
+              onClick={() => setShowWelcomeBot(false)}
+            >
+              <div className="welcome-bot-bubble-container">
+                <div className="speech-bubble">
+                  <p className="welcome-message">
+                    Chúng mình có các chức năng như bộ lọc, sticker, chỉnh sửa ảnh bằng AI, bản hảy thử nhé!
+                  </p>
+                </div>
+                <div className="robot-lottie-wrapper">
+                  <Lottie
+                    animationData={robotLottie}
+                    loop
+                    autoplay
+                    style={{ width: '720px', height: '720px' }}
+                  />
+                </div>
+              </div>
+            </div>
+      )}
       <div className="countdown">
         ⌛: {formattedCountdown}
       </div>
-      {/* === THÊM LOADING OVERLAY CHO TOÀN BỘ MÀN HÌNH === */}
-{(isProcessingSwap || isProcessingBg) && (
+{/* === LOADING OVERLAY CHO TẤT CẢ CÁC TÁC VỤ AI === */}
+      {(isProcessingSwap || isProcessingBg || loading) && (
         <div className="global-loading-overlay">
            <div className="loading-content">
               <div className="spinner-border text-light" style={{width: '3rem', height: '3rem'}} role="status"></div>
               <h4 className="mt-3 text-white">
-                {isProcessingSwap ? "Đang xử lý Face Swap..." : "Đang xử lý Background AI..."}
+                {/* Logic hiển thị chữ thông báo tương ứng */}
+                {isProcessingSwap ? "Đang xử lý Face Swap..." : 
+                 isProcessingBg ? "Đang xử lý Background AI..." : 
+                 loadingMessage}
               </h4>
               <p className="text-white-50">Vui lòng đợi trong giây lát</p>
            </div>

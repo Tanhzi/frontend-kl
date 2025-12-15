@@ -16,6 +16,17 @@ const Pricecut = () => {
     const [selectedSize, setSelectedSize] = useState('small');
     const [editedPairDataSmall, setEditedPairDataSmall] = useState([]);
     const [editedPairDataBig, setEditedPairDataBig] = useState([]);
+    const [errors, setErrors] = useState({}); // { index: "message" }
+
+    // Hàm validate số tiền
+    const validateSoTien = (value) => {
+        if (value === '') return ''; // Cho phép trống (hoặc bạn có thể bắt buộc)
+        const num = Number(value);
+        if (isNaN(num)) return 'Vui lòng nhập số hợp lệ';
+        if (num < 10000) return 'Số tiền phải ≥ 10.000';
+        if (num % 10000 !== 0) return 'Số tiền phải chia hết cho 10.000';
+        return '';
+    };
 
     useEffect(() => {
         if (!id_admin) return;
@@ -30,8 +41,8 @@ const Pricecut = () => {
                     const tempSmall = [];
                     for (let i = 0; i < sizeSmall.length; i += 2) {
                         tempSmall.push({
-                            soLuong: sizeSmall[i],
-                            soTien: sizeSmall[i + 1] ?? ''
+                            soLuong: sizeSmall[i]?.toString() || '',
+                            soTien: (sizeSmall[i + 1] ?? '').toString() || ''
                         });
                     }
                     setEditedPairDataSmall(tempSmall);
@@ -41,8 +52,8 @@ const Pricecut = () => {
                     const tempBig = [];
                     for (let i = 0; i < sizeBig.length; i += 2) {
                         tempBig.push({
-                            soLuong: sizeBig[i],
-                            soTien: sizeBig[i + 1] ?? ''
+                            soLuong: sizeBig[i]?.toString() || '',
+                            soTien: (sizeBig[i + 1] ?? '').toString() || ''
                         });
                     }
                     setEditedPairDataBig(tempBig);
@@ -63,25 +74,51 @@ const Pricecut = () => {
             newData[index] = { ...newData[index], [field]: value };
             setEditedPairDataBig(newData);
         }
+
+        // Xóa lỗi khi người dùng sửa
+        if (errors[index]) {
+            setErrors(prev => {
+                const newErrors = { ...prev };
+                delete newErrors[index];
+                return newErrors;
+            });
+        }
     };
 
     const handleUpdate = () => {
-        // Chuyển đổi thành mảng phẳng: [sl1, tien1, sl2, tien2, ...]
-        const flatSizeSmall = editedPairDataSmall.reduce((acc, item) => {
-            acc.push(item.soLuong, item.soTien);
-            return acc;
-        }, []);
+        const currentData = selectedSize === 'small' ? editedPairDataSmall : editedPairDataBig;
+        const newErrors = {};
 
-        const flatSizeBig = editedPairDataBig.reduce((acc, item) => {
-            acc.push(item.soLuong, item.soTien);
-            return acc;
-        }, []);
+        let hasError = false;
+        currentData.forEach((item, index) => {
+            const errorMsg = validateSoTien(item.soTien);
+            if (errorMsg) {
+                newErrors[index] = errorMsg;
+                hasError = true;
+            }
+        });
+
+        if (hasError) {
+            setErrors(newErrors);
+            alert('Vui lòng sửa các lỗi trước khi lưu!');
+            return;
+        }
+
+        // Chuyển đổi thành mảng phẳng: [sl1, tien1, sl2, tien2, ...]
+        const flatSizeSmall = editedPairDataSmall.map(item => [
+            item.soLuong === '' ? 0 : parseInt(item.soLuong, 10),
+            item.soTien === '' ? 0 : parseInt(item.soTien, 10)
+        ]).flat();
+
+        const flatSizeBig = editedPairDataBig.map(item => [
+            item.soLuong === '' ? 0 : parseInt(item.soLuong, 10),
+            item.soTien === '' ? 0 : parseInt(item.soTien, 10)
+        ]).flat();
 
         const payload = {
             id_admin: id_admin,
             size1: flatSizeSmall,
             size2: flatSizeBig
-            // KHÔNG gửi text1, text2 nữa
         };
 
         fetch(`${import.meta.env.VITE_API_BASE_URL}/size`, {
@@ -95,9 +132,11 @@ const Pricecut = () => {
             .then(result => {
                 console.log('Update successful:', result);
                 alert('Cập nhật thành công!');
+                setErrors({}); // Xóa lỗi sau khi lưu thành công
             })
             .catch(error => {
                 console.error('Error updating data:', error);
+                alert('Có lỗi khi cập nhật dữ liệu.');
             });
     };
 
@@ -126,9 +165,8 @@ const Pricecut = () => {
                     <table className="pricecut-table">
                         <thead>
                             <tr>
-                                <th>Số lượng</th>
+                                <th>Số lượng ảnh</th>
                                 <th>Số tiền</th>
-                                {/* ĐÃ XÓA cột "Ghi chú" */}
                             </tr>
                         </thead>
                         <tbody>
@@ -138,29 +176,57 @@ const Pricecut = () => {
                                         <td>
                                             <input
                                                 type="text"
+                                                inputMode="numeric"
+                                                pattern="\d*"
                                                 value={item.soLuong}
-                                                onChange={(e) => handleChange(index, 'soLuong', e.target.value)}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    if (/^\d*$/.test(val)) {
+                                                        handleChange(index, 'soLuong', val);
+                                                    }
+                                                }}
+                                                onWheel={(e) => e.target.blur()}
+                                                placeholder="0"
                                             />
                                         </td>
                                         <td>
                                             <input
                                                 type="text"
+                                                inputMode="numeric"
+                                                pattern="\d*"
                                                 value={item.soTien}
-                                                onChange={(e) => handleChange(index, 'soTien', e.target.value)}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    if (/^\d*$/.test(val)) {
+                                                        handleChange(index, 'soTien', val);
+                                                    }
+                                                }}
+                                                onBlur={(e) => {
+                                                    const errorMsg = validateSoTien(e.target.value);
+                                                    if (errorMsg) {
+                                                        setErrors(prev => ({ ...prev, [index]: errorMsg }));
+                                                    }
+                                                }}
+                                                onWheel={(e) => e.target.blur()}
+                                                placeholder="VD: 50000"
+                                                className={errors[index] ? 'pricecut-input-error' : ''}
                                             />
+                                            {errors[index] && (
+                                                <div className="pricecut-error-message">{errors[index]}</div>
+                                            )}
                                         </td>
-                                        {/* KHÔNG CÓ ô input cho ghiChu */}
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="2" className="pricecut-loading">Đang tải dữ liệu...</td>
+                                    <td colSpan="2" className="pricecut-loading">
+                                        Đang tải dữ liệu...
+                                    </td>
                                 </tr>
                             )}
                         </tbody>
                     </table>
                 </div>
-
 
                 <button className="pricecut-update-btn" onClick={handleUpdate}>
                     Cập nhật

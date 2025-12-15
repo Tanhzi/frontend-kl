@@ -469,10 +469,18 @@ const handleSaveBackgroundImage = () => {
                 // Lọc tất cả sự kiện có cùng ngày gần nhất
                 result = result.filter(event => event.date === latestDate);
             }
-        } else if (filterOption === "month") {
-            const currentMonth = new Date().toISOString().slice(0, 7);
-            result = result.filter(event => event.date.startsWith(currentMonth));
-        }
+        }else if (filterOption === "month") {
+    if (result.length === 0) {
+        result = [];
+    } else {
+        // Tìm sự kiện có ngày lớn nhất (gần nhất theo thời gian)
+        const latestEvent = result.reduce((prev, curr) =>
+            new Date(curr.date) > new Date(prev.date) ? curr : prev
+        );
+        const latestMonth = latestEvent.date.slice(0, 7); // "YYYY-MM"
+        result = result.filter(event => event.date.startsWith(latestMonth));
+    }
+}
 
         // Tìm kiếm theo ID, tên, ngày
         if (searchTerm.trim()) {
@@ -604,7 +612,7 @@ const handleSaveBackgroundImage = () => {
                                 <i className="bi bi-search"></i>
                                 <input
                                     type="text"
-                                    placeholder="Tìm kiếm theo id, tên, ngày..."
+                                    placeholder="Tìm kiếm theo tên, ngày..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
@@ -623,11 +631,11 @@ const handleSaveBackgroundImage = () => {
                                         Tất cả
                                     </button>
                                     <button className={filterOption === 'day' ? 'active' : ''} onClick={() => { setFilterOption('day'); setShowFilterMenu(false); }}>
-                                        Lọc theo ngày gần đây nhất
+                                        Ngày gần nhất
                                     </button>
-                                    <button className={filterOption === 'month' ? 'active' : ''} onClick={() => { setFilterOption('month'); setShowFilterMenu(false); }}>
-                                        Lọc theo tháng hiện tại
-                                    </button>
+<button className={filterOption === 'month' ? 'active' : ''} onClick={() => { setFilterOption('month'); setShowFilterMenu(false); }}>
+    Tháng gần nhất
+</button>
                                 </div>
                             </div>
                         </div>

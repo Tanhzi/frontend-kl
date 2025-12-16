@@ -104,6 +104,7 @@ const SelPhoto = () => {
   const [isProcessingSwap, setIsProcessingSwap] = useState(false); 
 
   const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+  const AI_URL = import.meta.env.VITE_AI_API_URL || 'http://localhost:5000';
 
   useEffect(() => {
     const savedBackground = localStorage.getItem('backgroundImage');
@@ -346,10 +347,9 @@ const SelPhoto = () => {
           const genFormData = new FormData();
           genFormData.append('image', sourceFile); 
           genFormData.append('prompt', template.prompt);
-const genRes = await fetch(`${API_URL}/ai/user-generate-target`, {
-  method: 'POST',
-  body: genFormData
-});
+          const genRes = await fetch(`${AI_URL}/user-generate-target`, {
+              method: 'POST', body: genFormData
+          });
           const genData = await genRes.json();
           if (!genData.success) throw new Error(genData.error || "Lỗi khi tạo ảnh đích (Gen AI)");
           const targetRes = await fetch(genData.target_image);
@@ -363,10 +363,9 @@ const genRes = await fetch(`${API_URL}/ai/user-generate-target`, {
       swapFormData.append('source', sourceFile);
       swapFormData.append('target', targetFile);
 
-const response = await fetch(`${API_URL}/ai/face-swap`, {
-  method: 'POST',
-  body: swapFormData
-});
+      const response = await fetch(`${AI_URL}/face-swap`, {
+        method: 'POST', body: swapFormData
+      });
       const data = await response.json();
 
       if (data.success && data.swapped_image) {
@@ -441,10 +440,9 @@ const response = await fetch(`${API_URL}/ai/face-swap`, {
       formData.append('foreground', sourceFile);
       formData.append('background', targetFile);
 
-const response = await fetch(`${API_URL}/ai/background-ai`, {
-  method: 'POST',
-  body: formData
-});
+      const response = await fetch(`${AI_URL}/background-ai`, {
+        method: 'POST', body: formData
+      });
       const data = await response.json();
 
       if (data.success && data.result_image) {
@@ -806,10 +804,10 @@ const response = await fetch(`${API_URL}/ai/background-ai`, {
             formData.append('image', fileToSend);
 
             console.log("Đang tạo ảnh Anime...");
-const res = await fetch(`${API_URL}/ai/anime-style`, {
-  method: 'POST',
-  body: formData
-});
+            const res = await fetch(`${AI_URL}/anime-style`, {
+                method: 'POST',
+                body: formData
+            });
             const data = await res.json();
 
             if (data.success) {
@@ -912,10 +910,10 @@ const res = await fetch(`${API_URL}/ai/anime-style`, {
       const formData = new FormData();
       formData.append('image', file);
 
-const res = await fetch(`${API_URL}/ai/enhance`, {
-  method: 'POST',
-  body: formData
-});
+      const res = await fetch(`${AI_URL}/enhance`, {
+        method: 'POST',
+        body: formData,
+      });
 
       const contentType = res.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {

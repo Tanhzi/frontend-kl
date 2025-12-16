@@ -56,6 +56,7 @@ const AiTopic = () => {
   });
 
   const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+  const AI_URL = import.meta.env.VITE_AI_API_URL || 'http://localhost:5000';
   const filterWrapperRef = useRef(null);
 
   // 1. LẤY DỮ LIỆU HIỆU ỨNG
@@ -133,12 +134,11 @@ const AiTopic = () => {
     
     setFormData(prev => ({ ...prev, isGenerating: true }));
     try {
-// Thành:
-const res = await fetch(`${API_URL}/admin-generate-image`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ prompt: formData.prompt })
-});
+      const res = await fetch(`${AI_URL}/admin-generate-image`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: formData.prompt })
+      });
       
       const data = await res.json();
       

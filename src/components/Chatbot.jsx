@@ -14,7 +14,7 @@ const Chatbot = () => {
   const inputRef = useRef(null);
   const recognitionRef = useRef(null);
   const listeningTimeoutRef = useRef(null);
-  const API_URL = import.meta.env.VITE_API_BASE_URL;
+  const AI_URL = import.meta.env.VITE_AI_API_URL || 'http://localhost:5000';
 
   const quickReplies = [
     { icon: '👋', text: 'Xin chào', message: 'Xin chào! Bạn có thể giới thiệu về SweetLens không?' },
@@ -99,11 +99,11 @@ const Chatbot = () => {
 
     try {
       // ✅ Gửi đúng field "question"
-const response = await fetch(`${API_URL}/chat`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ question: messageText }),
-});
+      const response = await fetch(`${AI_URL}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ question: messageText }), // 👈 SỬA TẠI ĐÂY
+      });
 
       const text = await response.text();
       let data;

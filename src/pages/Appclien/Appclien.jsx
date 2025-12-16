@@ -1,5 +1,4 @@
-// src/Appclien.jsx
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Chatbot from '../../components/Chatbot';
@@ -11,13 +10,25 @@ function Appclien() {
   const [backgroundImage, setBackgroundImage] = useState(null);
   const [isGlobalBackground, setIsGlobalBackground] = useState(false);
   const [logoImage, setLogoImage] = useState('/logo.jpg'); // fallback local
+  const location = useLocation();
   const [notes, setNotes] = useState([
     'Máy sẽ chụp tự động sau mỗi 10s',
     'Nếu là lần đầu đến với Memory booth\nHãy liên hệ nhân viên để được hỗ trợ',
     'Máy sẽ không trả lại tiền thừa, hãy liên hệ chúng mình để đổi tiền nhé!'
   ]);
 
-  const [showWelcomeBot, setShowWelcomeBot] = useState(true);
+// Dùng:
+const [showWelcomeBot, setShowWelcomeBot] = useState(() => {
+  // Nếu có state.skipWelcome từ route trước → ẩn Lottie
+  if (location.state?.skipWelcome) {
+    return false;
+  }
+  // Nếu đã từng vào rồi (localStorage), cũng ẩn đi
+  if (localStorage.getItem('hasSeenWelcomeBot')) {
+    return false;
+  }
+  return true;
+});
   const [robotLottie, setRobotLottie] = useState(null);
 
   // Fullscreen state

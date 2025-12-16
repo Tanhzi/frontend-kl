@@ -1,7 +1,7 @@
 // src/admin/Page/AccountUser/AccountUser.jsx
 import React, { useEffect, useState, useRef } from 'react';
 import Navbar from '../../components/Navbar';
-import './AccountUser.css'; // hoặc import './ContentChat.css' nếu muốn đồng bộ
+import './AccountUser.css'; // hoặc import './ContentChat.css' nếu muốn dùng chung
 
 const AccountUser = () => {
   const getAuth = () => {
@@ -202,7 +202,7 @@ const AccountUser = () => {
       email: user.email || '',
       password: '',
       id_topic: user.id_topic || '',
-      role: String(user.role), // Chuyển sang string để dùng trong select
+      role: String(user.role),
       id_admin: user.id_admin || id_admin
     });
     setShowEditModal(true);
@@ -225,7 +225,6 @@ const AccountUser = () => {
       ? `${API_URL}/users/${selectedUser.id}`
       : `${API_URL}/users`;
 
-    // Validate
     if (!formData.username || !formData.email) {
       alert('Vui lòng nhập đầy đủ username và email!');
       return;
@@ -284,6 +283,13 @@ const AccountUser = () => {
     return role === 0 ? 'Người dùng' : 'Nhân viên';
   };
 
+  // 🔑 HÀM TRA CỨU TÊN CHỦ ĐỀ TỪ ID
+  const getTopicName = (topicId) => {
+    if (!topicId) return '—';
+    const topic = topics.find(t => String(t.id) === String(topicId));
+    return topic ? topic.name : `ID: ${topicId}`;
+  };
+
   // -----------------------------------------------------------------
   return (
     <div className="contentchat-root">
@@ -292,7 +298,7 @@ const AccountUser = () => {
       <div className="contentchat-scroll-container">
         <div className={`contentchat-container ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
           <div className="contentchat-header">
-            <h2 className="contentchat-title">QUẢN LÝ TÀI KHOẢN NGƯỜI DÙNG</h2>
+            <h2 className="contentchat-title">QUẢN LÝ TÀI KHOÀN</h2>
           </div>
 
           <div className="contentchat-controls">
@@ -378,7 +384,7 @@ const AccountUser = () => {
                   <th>STT</th>
                   <th>USERNAME</th>
                   <th>EMAIL</th>
-                  <th>ID_TOPIC</th>
+                  <th>SỰ KIỆN</th> {/* ← ĐÃ ĐỔI TÊN CỘT */}
                   <th>VAI TRÒ</th>
                   <th style={{ textAlign: 'center' }}>HÀNH ĐỘNG</th>
                 </tr>
@@ -402,7 +408,7 @@ const AccountUser = () => {
                       <td>{(currentPage - 1) * itemsPerPage + index + 1}</td>
                       <td>{user.username}</td>
                       <td>{user.email}</td>
-                      <td>{user.id_topic || '—'}</td>
+                      <td>{getTopicName(user.id_topic)}</td> {/* ← HIỂN THỊ TÊN CHỦ ĐỀ */}
                       <td>{getRoleLabel(user.role)}</td>
                       <td className="contentchat-actions">
                         <button onClick={() => openEditModal(user)} className="edit-btn">
@@ -467,16 +473,16 @@ const AccountUser = () => {
               />
             </div>
             <div className="form-group">
-              <label>CHỦ ĐỀ</label>
+              <label>SỰ KIỆN</label>
               <select
                 value={formData.id_topic}
                 onChange={e => setFormData({ ...formData, id_topic: e.target.value })}
                 style={{ width: '100%', padding: '12px 16px', border: '2px solid #f48fb1', borderRadius: '12px', fontSize: '15px' }}
               >
-                <option value="">-- Chọn chủ đề --</option>
+                <option value="">-- Chọn sự kiện --</option>
                 {topics.map(topic => (
                   <option key={topic.id} value={topic.id}>
-                    {topic.id} : {topic.name}
+                    {topic.name}
                   </option>
                 ))}
               </select>
@@ -530,16 +536,16 @@ const AccountUser = () => {
               />
             </div>
             <div className="form-group">
-              <label>CHỦ ĐỀ</label>
+              <label>SỰ KIỆN</label>
               <select
                 value={formData.id_topic}
                 onChange={e => setFormData({ ...formData, id_topic: e.target.value })}
                 style={{ width: '100%', padding: '12px 16px', border: '2px solid #f48fb1', borderRadius: '12px', fontSize: '15px' }}
               >
-                <option value="">-- Chọn chủ đề --</option>
+                <option value="">-- Chọn sự kiện --</option>
                 {topics.map(topic => (
                   <option key={topic.id} value={topic.id}>
-                   {topic.id} : {topic.name}
+                    {topic.name}
                   </option>
                 ))}
               </select>

@@ -654,7 +654,7 @@ const handleSaveBackgroundImage = () => {
                                             title={selectAllGlobal ? "Bỏ chọn tất cả" : "Chọn tất cả sự kiện ở mọi trang"}
                                         />
                                     </th>
-                                    <th>ID</th>
+                                    <th>STT</th>
                                     <th>TÊN</th>
                                     <th>NGÀY</th>
                                     <th>ẢNH NỀN</th>
@@ -675,7 +675,7 @@ const handleSaveBackgroundImage = () => {
                                                     className="event-custom-checkbox"
                                                 />
                                             </td>
-                                            <td>{event.id}</td>
+                                            <td>{(currentPage - 1) * ITEMS_PER_PAGE + paginatedEvents.indexOf(event) + 1}</td>
                                             <td><strong>{event.name}</strong></td>
                                             <td>{event.date}</td>
                                             <td>

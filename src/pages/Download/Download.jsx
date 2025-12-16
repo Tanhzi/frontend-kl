@@ -308,18 +308,28 @@ const Download = () => {
               <button className="feedback-close" onClick={() => setIsMapOpen(false)}>×</button>
             </div>
             
-            <div className="feedback-content" style={{ flex: 1, padding: 0, overflow: 'hidden', borderRadius: '0 0 12px 12px' }}>
-               {/* Iframe Google Maps */}
-               <iframe
-                  title="Google Map Store Location"
-                  width="100%"
-                  height="100%"
-                  frameBorder="0"
-                  style={{ border: 0 }}
-                  src={`https://maps.google.com/maps?q=${encodeURIComponent(selectedStore.address)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
-                  allowFullScreen
-                ></iframe>
-            </div>
+<div style={{ position: 'relative', width: '100%', height: '100%' }}>
+  <iframe
+    title="Google Map Store Location"
+    width="100%"
+    height="100%"
+    frameBorder="0"
+    style={{ border: 0 }}
+    src={`https://maps.google.com/maps?q=${encodeURIComponent(selectedStore.address)}&z=15&output=embed`}
+  ></iframe>
+  {/* Lớp phủ chặn click */}
+  <div
+    style={{
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      cursor: 'default'
+    }}
+    onClick={(e) => e.stopPropagation()}
+  ></div>
+</div>
           </div>
         </div>
       )}

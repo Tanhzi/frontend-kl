@@ -201,13 +201,15 @@ const SelPhoto = () => {
       try {
         const authStr = localStorage.getItem('auth');
         let id_admin = '';
+        let id_topic = '';
         if (authStr) { try { id_admin = JSON.parse(authStr).id_admin; } catch {} }
+        if (authStr) { try { id_topic = JSON.parse(authStr).id_topic; } catch {} }
         
         setLoadingTemplates(true);
         setLoadingBgTemplates(true);
 
-        const swapUrl = `${API_URL}/ai-topics?id_admin=${id_admin}&type=swap`;
-        const bgUrl = `${API_URL}/ai-topics?id_admin=${id_admin}&type=background`;
+        const swapUrl = `${API_URL}/ai-topics?id_admin=${id_admin}&id_topic=${id_topic}&type=swap`;
+        const bgUrl = `${API_URL}/ai-topics?id_admin=${id_admin}&id_topic=${id_topic}&type=background`;
 
         const [swapRes, bgRes] = await Promise.all([
             fetch(swapUrl).catch(() => null),

@@ -267,9 +267,12 @@ function Crecuts() {
       </div>
 
       <div className="navigation-buttons">
-        <button className="box1 mb-3" onClick={() => navigate(-1)}>
-          QUAY LẠI
-        </button>
+<button 
+  className="box1 mb-3" 
+  onClick={() => navigate('/Appclien', { state: { skipWelcome: true } })}
+>
+  QUAY LẠI
+</button>
         <button className="box2 mb-3" onClick={handleContinue} disabled={isDisabled}>
           TIẾP TỤC
         </button>

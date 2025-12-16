@@ -133,11 +133,12 @@ const AiTopic = () => {
     
     setFormData(prev => ({ ...prev, isGenerating: true }));
     try {
-      const res = await fetch('http://localhost:5000/admin-generate-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: formData.prompt })
-      });
+// Thành:
+const res = await fetch(`${API_URL}/admin-generate-image`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ prompt: formData.prompt })
+});
       
       const data = await res.json();
       

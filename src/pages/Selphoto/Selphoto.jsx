@@ -346,9 +346,10 @@ const SelPhoto = () => {
           const genFormData = new FormData();
           genFormData.append('image', sourceFile); 
           genFormData.append('prompt', template.prompt);
-          const genRes = await fetch('http://localhost:5000/user-generate-target', {
-              method: 'POST', body: genFormData
-          });
+const genRes = await fetch(`${API_URL}/ai/user-generate-target`, {
+  method: 'POST',
+  body: genFormData
+});
           const genData = await genRes.json();
           if (!genData.success) throw new Error(genData.error || "Lỗi khi tạo ảnh đích (Gen AI)");
           const targetRes = await fetch(genData.target_image);
@@ -362,9 +363,10 @@ const SelPhoto = () => {
       swapFormData.append('source', sourceFile);
       swapFormData.append('target', targetFile);
 
-      const response = await fetch('http://localhost:5000/face-swap', {
-        method: 'POST', body: swapFormData
-      });
+const response = await fetch(`${API_URL}/ai/face-swap`, {
+  method: 'POST',
+  body: swapFormData
+});
       const data = await response.json();
 
       if (data.success && data.swapped_image) {
@@ -439,9 +441,10 @@ const SelPhoto = () => {
       formData.append('foreground', sourceFile);
       formData.append('background', targetFile);
 
-      const response = await fetch('http://localhost:5000/background-ai', {
-        method: 'POST', body: formData
-      });
+const response = await fetch(`${API_URL}/ai/background-ai`, {
+  method: 'POST',
+  body: formData
+});
       const data = await response.json();
 
       if (data.success && data.result_image) {
@@ -803,10 +806,10 @@ const SelPhoto = () => {
             formData.append('image', fileToSend);
 
             console.log("Đang tạo ảnh Anime...");
-            const res = await fetch('http://localhost:5000/anime-style', {
-                method: 'POST',
-                body: formData
-            });
+const res = await fetch(`${API_URL}/ai/anime-style`, {
+  method: 'POST',
+  body: formData
+});
             const data = await res.json();
 
             if (data.success) {
@@ -909,10 +912,10 @@ const SelPhoto = () => {
       const formData = new FormData();
       formData.append('image', file);
 
-      const res = await fetch('http://localhost:5000/enhance', {
-        method: 'POST',
-        body: formData,
-      });
+const res = await fetch(`${API_URL}/ai/enhance`, {
+  method: 'POST',
+  body: formData
+});
 
       const contentType = res.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {

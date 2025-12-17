@@ -14,7 +14,7 @@ const Chatbot = () => {
   const inputRef = useRef(null);
   const recognitionRef = useRef(null);
   const listeningTimeoutRef = useRef(null);
-  const AI_URL = import.meta.env.VITE_AI_API_URL || 'http://localhost:5000';
+  const AI_URL = import.meta.env.VITE_AI_API_URL || 'http://localhost:5001';
 
   const quickReplies = [
     { icon: '👋', text: 'Xin chào', message: 'Xin chào! Bạn có thể giới thiệu về SweetLens không?' },

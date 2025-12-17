@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import Chatbot from '../../components/Chatbot';
 import './Choose.css';
 
 const Choose = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   // Nhận dữ liệu từ qr.jsx (bao gồm compositeImage, qrImage và qrGif nếu có)
   const { compositeImage, qrImage, size, cut } = location.state || {};
-  
+
   // State cho countdown và chuyển trang tự động
   const [countdown, setCountdown] = useState(50);
   const [autoTriggered, setAutoTriggered] = useState(false);
@@ -18,21 +19,21 @@ const Choose = () => {
   // Ref để đảm bảo in chỉ gọi 1 lần
   const printTriggeredRef = useRef(false);
 
-    // ✅ Áp dụng background từ localStorage nếu có
-useEffect(() => {
-  const savedBackground = localStorage.getItem('backgroundImage');
-  if (savedBackground) {
-    document.body.style.backgroundImage = `url(${savedBackground})`;
-    document.body.style.backgroundSize = 'cover';
-    document.body.style.backgroundRepeat = 'no-repeat';
-    document.body.style.backgroundAttachment = 'fixed';
-  }
+  // ✅ Áp dụng background từ localStorage nếu có
+  useEffect(() => {
+    const savedBackground = localStorage.getItem('backgroundImage');
+    if (savedBackground) {
+      document.body.style.backgroundImage = `url(${savedBackground})`;
+      document.body.style.backgroundSize = 'cover';
+      document.body.style.backgroundRepeat = 'no-repeat';
+      document.body.style.backgroundAttachment = 'fixed';
+    }
 
-  // Cleanup khi rời khỏi trang
-  return () => {
-    document.body.style.backgroundImage = 'none';
-  };
-}, []);
+    // Cleanup khi rời khỏi trang
+    return () => {
+      document.body.style.backgroundImage = 'none';
+    };
+  }, []);
   // Giảm countdown mỗi giây
   useEffect(() => {
     if (countdown <= 0) return;
@@ -41,7 +42,7 @@ useEffect(() => {
     }, 1000);
     return () => clearInterval(timer);
   }, [countdown]);
-  
+
   // Khi countdown về 0, tự động gọi handleFinish
   useEffect(() => {
     if (countdown === 0 && !autoTriggered) {
@@ -67,9 +68,9 @@ useEffect(() => {
     const orientation = [3].includes(parseInt(cut)) ? 'Landscape' : 'Portrait';
     const copies = size;
     const paper = [3, 41].includes(parseInt(cut)) ? '6x4-Split (6x2 2 prints)' : '6x4/152×100mm';
-    
+
     setPrintStatus('Đang chuẩn bị in...');
-    
+
     try {
       const ws = new WebSocket('ws://localhost:8088');
       ws.onopen = () => {
@@ -97,23 +98,23 @@ useEffect(() => {
       setPrintStatus('Lỗi: ' + error.message);
     }
   }, [compositeImage, size, cut]);
-  
+
   // Khi nhấn nút "KẾT THÚC", chuyển về trang chính
   const handleFinish = () => {
     navigate('/Download');
   };
-  
+
   // Thử in lại nếu có lỗi
   const handleRetryPrint = () => {
     printTriggeredRef.current = false;
     setPrintStatus('Đang thử in lại...');
   };
-  
+
   return (
     <div className="choose-container">
       <h1 className="touch-to-crecuts pt-5">Ảnh đang được in</h1>
       <div className='countdown'>
-      ⌛: {countdown}
+        ⌛: {countdown}
       </div>
       {printStatus && (
         <div style={{
@@ -131,23 +132,25 @@ useEffect(() => {
           )}
         </div>
       )}
-<div className="choose-image-row">
-  {qrImage ? (
-    <>
-      <img src={compositeImage} alt="Ảnh chính" className="choose-left" />
-      <div className="choose-middle mx-5">
-        <img src={qrImage} alt="QR Code cho ảnh" />
-        <div className="qr-label">QR Code Ảnh</div>
+      <div className="choose-image-row">
+        {qrImage ? (
+          <>
+            <img src={compositeImage} alt="Ảnh chính" className="choose-left" />
+            <div className="choose-middle mx-5">
+              <img src={qrImage} alt="QR Code cho ảnh" />
+              <div className="qr-label">QR Code Ảnh</div>
+            </div>
+          </>
+        ) : (
+          <img src={compositeImage} alt="Ảnh chính" className="choose-centered" />
+        )}
       </div>
-    </>
-  ) : (
-    <img src={compositeImage} alt="Ảnh chính" className="choose-centered" />
-  )}
-</div>
       <div className="d-flex justify-content-center">
         <button className="continue-btn" onClick={handleFinish}>Đánh Giá</button>
       </div>
+      <Chatbot />
     </div>
+
   );
 };
 

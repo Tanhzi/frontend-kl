@@ -6,20 +6,17 @@ import './Choose.css';
 const Choose = () => {
   const location = useLocation();
   const navigate = useNavigate();
-
-  // Nhận dữ liệu từ qr.jsx (bao gồm compositeImage, qrImage và qrGif nếu có)
+  
+  // Nhận dữ liệu từ qr.jsx
   const { compositeImage, qrImage, size, cut } = location.state || {};
-
-  // State cho countdown và chuyển trang tự động
+  
   const [countdown, setCountdown] = useState(50);
   const [autoTriggered, setAutoTriggered] = useState(false);
-  // State cho trạng thái in
   const [printStatus, setPrintStatus] = useState(null);
 
-  // Ref để đảm bảo in chỉ gọi 1 lần
   const printTriggeredRef = useRef(false);
 
-  // ✅ Áp dụng background từ localStorage nếu có
+  // Áp dụng background
   useEffect(() => {
     const savedBackground = localStorage.getItem('backgroundImage');
     if (savedBackground) {
@@ -28,13 +25,12 @@ const Choose = () => {
       document.body.style.backgroundRepeat = 'no-repeat';
       document.body.style.backgroundAttachment = 'fixed';
     }
-
-    // Cleanup khi rời khỏi trang
     return () => {
       document.body.style.backgroundImage = 'none';
     };
   }, []);
-  // Giảm countdown mỗi giây
+
+  // Countdown
   useEffect(() => {
     if (countdown <= 0) return;
     const timer = setInterval(() => {
@@ -43,7 +39,7 @@ const Choose = () => {
     return () => clearInterval(timer);
   }, [countdown]);
 
-  // Khi countdown về 0, tự động gọi handleFinish
+  // Auto finish
   useEffect(() => {
     if (countdown === 0 && !autoTriggered) {
       setAutoTriggered(true);
@@ -51,19 +47,16 @@ const Choose = () => {
     }
   }, [countdown, autoTriggered]);
 
-  // Effect in ảnh chỉ 1 lần
+  // === LOGIC IN ẢNH (ĐÃ SỬA KẾT NỐI SERVER) ===
   useEffect(() => {
-    // Nếu đã in hoặc thiếu dữ liệu, không thực hiện
     if (printTriggeredRef.current) return;
     if (!compositeImage || !size || cut == null) {
       setPrintStatus('Thiếu thông tin để in');
       return;
     }
 
-    // Đánh dấu đã thực hiện in
     printTriggeredRef.current = true;
 
-    // Thiết lập in
     const printer = 'HiTi P525L';
     const orientation = [3].includes(parseInt(cut)) ? 'Landscape' : 'Portrait';
     const copies = size;
@@ -72,39 +65,60 @@ const Choose = () => {
     setPrintStatus('Đang chuẩn bị in...');
 
     try {
-      const ws = new WebSocket('ws://localhost:8088');
+      // --- THAY ĐỔI Ở ĐÂY ---
+      // 1. Lấy URL gốc từ biến môi trường (Ví dụ: https://ngrok-url... hoặc http://localhost:5000)
+      const API_URL = import.meta.env.VITE_AI_API_URL || 'http://localhost:5000';
+      
+      // 2. Chuyển đổi sang giao thức WebSocket (http -> ws, https -> wss)
+      // Nếu chạy qua Ngrok (https) nó sẽ tự thành wss (bảo mật)
+      const WS_URL = API_URL.replace(/^http/, 'ws');
+      
+      console.log(`[PRINTER] Connecting to WebSocket: ${WS_URL}`);
+      const ws = new WebSocket(WS_URL);
+      // ----------------------
+
       ws.onopen = () => {
-        console.log('Kết nối WebSocket thành công');
+        console.log('✅ Kết nối WebSocket máy in thành công');
         ws.send(JSON.stringify({
           type: 'print-request',
           data: { image: compositeImage, printer, orientation, copies, paper }
         }));
         setPrintStatus('Đã gửi yêu cầu in');
       };
+
       ws.onmessage = (event) => {
-        const message = JSON.parse(event.data);
-        if (message.type === 'print-complete') {
-          setPrintStatus('In thành công');
-        } else if (message.type === 'print-error') {
-          setPrintStatus('Lỗi in: ' + message.error);
+        try {
+            const message = JSON.parse(event.data);
+            if (message.type === 'print-complete') {
+              setPrintStatus('In thành công');
+            } else if (message.type === 'print-error') {
+              setPrintStatus('Lỗi in: ' + message.error);
+            }
+        } catch (e) {
+            console.error('Lỗi parse message in:', e);
         }
       };
+
       ws.onerror = (error) => {
-        console.error('Lỗi WebSocket:', error);
-        setPrintStatus('Lỗi kết nối: Không thể gửi yêu cầu in');
+        console.error('❌ Lỗi WebSocket:', error);
+        setPrintStatus('Lỗi kết nối Server in (Kiểm tra đường truyền)');
       };
+      
+      // Cleanup: Đóng kết nối khi component unmount
+      return () => {
+          if (ws.readyState === 1) ws.close();
+      };
+
     } catch (error) {
       console.error('Lỗi khi gửi yêu cầu in:', error);
       setPrintStatus('Lỗi: ' + error.message);
     }
   }, [compositeImage, size, cut]);
 
-  // Khi nhấn nút "KẾT THÚC", chuyển về trang chính
   const handleFinish = () => {
     navigate('/Download');
   };
 
-  // Thử in lại nếu có lỗi
   const handleRetryPrint = () => {
     printTriggeredRef.current = false;
     setPrintStatus('Đang thử in lại...');
@@ -120,7 +134,7 @@ const Choose = () => {
         <div style={{
           position: 'absolute', top: '50px', left: '10px',
           fontSize: '16px', background: '#fff', padding: '5px',
-          borderRadius: '5px', zIndex: 1000
+          borderRadius: '5px', zIndex: 1000, boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
         }}>
           {printStatus}
           {printStatus.includes('Lỗi') && (
@@ -150,7 +164,6 @@ const Choose = () => {
       </div>
       <Chatbot />
     </div>
-
   );
 };
 

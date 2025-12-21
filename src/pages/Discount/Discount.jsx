@@ -22,7 +22,7 @@ function Discount() {
   const [discountCode, setDiscountCode] = useState('');
   const [discountValue, setDiscountValue] = useState(0);
   const [availableDiscounts, setAvailableDiscounts] = useState([]);
-  const [discountError, setDiscountError] = useState(''); // 👈 Thêm state lỗi
+  const [discountError, setDiscountError] = useState(''); // State lưu lỗi mã giảm giá
 
   const { initializeCountdown } = useCountdown();
   const discountInputRef = useRef(null);
@@ -49,31 +49,60 @@ function Discount() {
     }
   }, [id_admin, initializeCountdown]);
 
-  // Kết nối WebSocket để nhận tiền
+  // ============================================================
+  // 🔥 KẾT NỐI WEBSOCKET NHẬN TIỀN (ĐÃ CẬP NHẬT)
+  // ============================================================
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:8088');
+    // 1. Lấy URL API từ biến môi trường (Nếu không có thì fallback về localhost:5000)
+    const API_URL = import.meta.env.VITE_AI_API_URL || 'http://localhost:5000';
+    
+    // 2. Chuyển đổi giao thức http -> ws hoặc https -> wss
+    // Ví dụ: https://my-ngrok.app -> wss://my-ngrok.app
+    const WS_URL = API_URL.replace(/^http/, 'ws');
 
-    ws.onopen = () => {
-      console.log('✅ Kết nối WebSocket thành công.');
-    };
+    console.log(`[DEPOSIT] Đang kết nối tới máy nhận tiền qua: ${WS_URL}`);
+    
+    let ws = null;
+    try {
+        ws = new WebSocket(WS_URL);
 
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.deposit !== undefined) {
-          setDepositAmount(prev => prev + data.deposit);
+        ws.onopen = () => {
+          console.log('✅ Kết nối WebSocket nhận tiền thành công.');
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            // Server gửi: { type: 'deposit', deposit: 10000 }
+            if (data.type === 'deposit' && data.deposit !== undefined) {
+              console.log(`💰 Nhận được tiền: ${data.deposit}`);
+              setDepositAmount(prev => prev + data.deposit);
+            }
+          } catch (error) {
+            console.error('❌ Lỗi parse dữ liệu từ WebSocket:', error);
+          }
+        };
+
+        ws.onerror = (error) => {
+          console.error('❌ Lỗi kết nối WebSocket:', error);
+        };
+
+        ws.onclose = () => {
+            console.log('⚠️ WebSocket nhận tiền đã đóng.');
+        };
+    } catch (err) {
+        console.error('Lỗi khởi tạo WebSocket:', err);
+    }
+
+    // Cleanup khi rời trang
+    return () => {
+        if (ws && ws.readyState === 1) {
+            ws.close();
         }
-      } catch (error) {
-        console.error('❌ Lỗi parse dữ liệu từ WebSocket:', error);
-      }
     };
-
-    ws.onerror = (error) => {
-      console.error('❌ Lỗi WebSocket:', error);
-    };
-
-    return () => ws.close();
   }, []);
+
+  // ============================================================
 
   // Lấy danh sách mã giảm giá
   useEffect(() => {
@@ -144,6 +173,7 @@ function Discount() {
       if (result.status === 'success') {
         setDiscountValue(result.value);
         const requiredAfterDiscount = parsePrice(price) - result.value;
+        // Nếu giảm giá >= giá tiền -> Chuyển trang luôn
         if (requiredAfterDiscount <= 0) {
           const success = await submitPaymentData(result.value);
           if (success) {

@@ -130,7 +130,7 @@ const handleKeyClick = (key) => {
           const qrImg = new Image();
           qrImg.crossOrigin = 'anonymous';
           qrImg.onload = () => {
-            const qrSize = Math.min(canvas.width * 0.15, 100);
+            const qrSize = Math.min(canvas.width * 0.2, 150); // Increased size from 15% to 20% and max size from 100px to 150px
             const margin = 10;
             const qrY = canvas.height - qrSize - margin;
 
@@ -352,7 +352,7 @@ const sendOriginalImagesEmail = async (email, images, gifData = null) => {
               const qrImg = new Image();
               qrImg.crossOrigin = 'anonymous';
               qrImg.onload = () => {
-                const qrSize = Math.min(canvas.width * 0.15, 100);
+                const qrSize = Math.min(canvas.width * 0.2, 150); // Increased size from 15% to 20% and max size from 100px to 150px
                 const margin = 10;
                 const qrY = canvas.height - qrSize - margin;
 

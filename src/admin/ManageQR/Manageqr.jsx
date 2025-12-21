@@ -53,6 +53,76 @@ const QRModal = ({ isOpen, onClose, qrImage, qrLink }) => {
   );
 };
 
+// === Hàm render rows cho bảng đơn hàng ===
+const renderOrderRows = (paginatedOrders, currentPage, ITEMS_PER_PAGE, handleViewFrame, handleViewQR) => {
+  if (paginatedOrders.length === 0) {
+    return (
+      <tr>
+        <td colSpan="5" className="manageqr-no-data">Không có dữ liệu.</td>
+      </tr>
+    );
+  }
+
+  return paginatedOrders.map((order, index) => (
+    <tr key={order.id}>
+      <td>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
+      <td><strong>{order.discount_code || '—'}</strong></td>
+      <td>{order.time}</td>
+      <td>
+        <button
+          className="manageqr-btn manageqr-btn-frame"
+          onClick={() => handleViewFrame(order.frame_id)}
+          disabled={!order.frame_id}
+        >
+          <FaEye />
+        </button>
+      </td>
+      <td>
+        <button
+          className="manageqr-btn manageqr-btn-qr"
+          onClick={() => handleViewQR(order.qr_id)}
+          disabled={!order.qr_id}
+        >
+          <FaEye />
+        </button>
+      </td>
+    </tr>
+  ));
+};
+
+// === Hàm render rows cho bảng top khung ảnh ===
+const renderTopFramesRows = (topFrames) => {
+  if (topFrames.length === 0) {
+    return (
+      <tr>
+        <td colSpan="3" className="manageqr-no-data">Chưa có dữ liệu khung ảnh.</td>
+      </tr>
+    );
+  }
+
+  return topFrames.map((item, index) => (
+    <tr key={item.id_frame}>
+      <td>{index + 1}</td>
+      <td>
+        {item.frame ? (
+          <img
+            src={item.frame}
+            alt={`Khung ${item.id_frame}`}
+            className="manageqr-top-frame-preview"
+            onError={(e) => {
+              e.target.alt = 'Ảnh lỗi';
+              e.target.style.display = 'none';
+            }}
+          />
+        ) : (
+          <span className="manageqr-no-image">—</span>
+        )}
+      </td>
+      <td>{item.usage_count}</td>
+    </tr>
+  ));
+};
+
 // === COMPONENT CHÍNH ===
 const Manageqr = () => {
   // === Auth ===
@@ -61,7 +131,7 @@ const Manageqr = () => {
     return saved ? JSON.parse(saved) : null;
   };
   const [auth, setAuth] = useState(getAuth());
-  const { id_admin, username, } = auth || {};
+  const { id_admin, username } = auth || {};
 
   // === UI State ===
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -78,7 +148,7 @@ const Manageqr = () => {
 
   // === Tìm kiếm & lọc ===
   const [searchTerm, setSearchTerm] = useState('');
-  const [dateFilter, setDateFilter] = useState('all'); // Mặc định: Tất cả
+  const [dateFilter, setDateFilter] = useState('all');
 
   // === Phân trang - 10 ITEMS ===
   const [currentPage, setCurrentPage] = useState(1);
@@ -170,52 +240,53 @@ const Manageqr = () => {
   }, [id_admin]);
 
   // === LỌC & TÌM KIẾM ===
-const filteredOrders = useMemo(() => {
-  let result = [...orders];
+  const filteredOrders = useMemo(() => {
+    let result = [...orders];
 
-  if (dateFilter === 'latest') {
-    if (result.length > 0) {
-      const latestDate = result.reduce((latest, order) => {
-        const orderDate = new Date(order.time || 0);
-        return orderDate > latest ? orderDate : latest;
-      }, new Date(0));
+    if (dateFilter === 'latest') {
+      if (result.length > 0) {
+        const latestDate = result.reduce((latest, order) => {
+          const orderDate = new Date(order.time || 0);
+          return orderDate > latest ? orderDate : latest;
+        }, new Date(0));
 
-      const latestDateStr = latestDate.toISOString().split('T')[0];
-      result = result.filter(order => {
-        const orderDateStr = (order.time || '').split(' ')[0];
-        return orderDateStr === latestDateStr;
-      });
+        const latestDateStr = latestDate.toISOString().split('T')[0];
+        result = result.filter(order => {
+          const orderDateStr = (order.time || '').split(' ')[0];
+          return orderDateStr === latestDateStr;
+        });
+      }
+    } else if (dateFilter === 'month') {
+      if (result.length === 0) {
+        result = [];
+      } else {
+        const latestOrder = result.reduce((prev, curr) => {
+          const prevTime = new Date(prev.time || 0);
+          const currTime = new Date(curr.time || 0);
+          return currTime > prevTime ? curr : prev;
+        });
+
+        const latestMonth = new Date(latestOrder.time).toISOString().slice(0, 7);
+        result = result.filter(order => {
+          if (!order.time) return false;
+          const orderMonth = order.time.split(' ')[0].slice(0, 7);
+          return orderMonth === latestMonth;
+        });
+      }
     }
-  } else if (dateFilter === 'month') {
-    if (result.length === 0) {
-      result = [];
-    } else {
-      const latestOrder = result.reduce((prev, curr) => {
-        const prevTime = new Date(prev.time || 0);
-        const currTime = new Date(curr.time || 0);
-        return currTime > prevTime ? curr : prev;
-      });
 
-      const latestMonth = new Date(latestOrder.time).toISOString().slice(0, 7);
-      result = result.filter(order => {
-        if (!order.time) return false;
-        const orderMonth = order.time.split(' ')[0].slice(0, 7);
-        return orderMonth === latestMonth;
-      });
+    if (searchTerm.trim()) {
+      const term = searchTerm.trim().toLowerCase();
+      result = result.filter(order =>
+        String(order.id).includes(term) ||
+        (order.discount_code || '').toLowerCase().includes(term) ||
+        (order.time || '').toLowerCase().includes(term)
+      );
     }
-  }
 
-  if (searchTerm.trim()) {
-    const term = searchTerm.trim().toLowerCase();
-    result = result.filter(order =>
-      String(order.id).includes(term) ||
-      (order.discount_code || '').toLowerCase().includes(term) ||
-      (order.time || '').toLowerCase().includes(term)
-    );
-  }
+    return result;
+  }, [orders, dateFilter, searchTerm]);
 
-  return result;
-}, [orders, dateFilter, searchTerm]);
   // === PHÂN TRANG ===
   const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
   const paginatedOrders = useMemo(() => {
@@ -316,30 +387,39 @@ const filteredOrders = useMemo(() => {
               <div className="manageqr-filter-wrapper" ref={filterRef}>
                 <button
                   className="manageqr-filter-toggle-btn"
-                  onClick={() => setShowFilterMenu(prev => !prev)}
+                  onClick={() => setShowFilterMenu((prev) => !prev)}
                 >
                   <i className="bi bi-funnel"></i>
                 </button>
 
                 <div className={`manageqr-filter-menu ${showFilterMenu ? 'show' : ''}`}>
-                  <button 
-                    className={dateFilter === 'all' ? 'active' : ''} 
-                    onClick={() => { setDateFilter('all'); setShowFilterMenu(false); }}
+                  <button
+                    className={dateFilter === 'all' ? 'active' : ''}
+                    onClick={() => {
+                      setDateFilter('all');
+                      setShowFilterMenu(false);
+                    }}
                   >
                     Tất cả
                   </button>
-                  <button 
-                    className={dateFilter === 'latest' ? 'active' : ''} 
-                    onClick={() => { setDateFilter('latest'); setShowFilterMenu(false); }}
+                  <button
+                    className={dateFilter === 'latest' ? 'active' : ''}
+                    onClick={() => {
+                      setDateFilter('latest');
+                      setShowFilterMenu(false);
+                    }}
                   >
                     Ngày gần nhất
                   </button>
-<button 
-  className={dateFilter === 'month' ? 'active' : ''} 
-  onClick={() => { setDateFilter('month'); setShowFilterMenu(false); }}
->
-  Tháng gần nhất
-</button>
+                  <button
+                    className={dateFilter === 'month' ? 'active' : ''}
+                    onClick={() => {
+                      setDateFilter('month');
+                      setShowFilterMenu(false);
+                    }}
+                  >
+                    Tháng gần nhất
+                  </button>
                 </div>
               </div>
             </div>
@@ -355,7 +435,7 @@ const filteredOrders = useMemo(() => {
                 <div className="manageqr-loading">Đang tải dữ liệu...</div>
               ) : (
                 <>
-                  <div className='manageqr-table-wrapper'>
+                  <div className="manageqr-table-wrapper">
                     <table className="manageqr-order-table">
                       <thead>
                         <tr>
@@ -366,39 +446,15 @@ const filteredOrders = useMemo(() => {
                           <th>MÃ QR</th>
                         </tr>
                       </thead>
-<tbody>
-  {paginatedOrders.length > 0 ? (
-    paginatedOrders.map((order, index) => (
-      <tr key={order.id}>
-        <td>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</td> {/* ← Sửa ở đây */}
-        <td><strong>{order.discount_code || '—'}</strong></td>
-        <td>{order.time}</td>
-        <td>
-          <button
-            className="manageqr-btn manageqr-btn-frame"
-            onClick={() => handleViewFrame(order.frame_id)}
-            disabled={!order.frame_id}
-          >
-            <FaEye />
-          </button>
-        </td>
-        <td>
-          <button
-            className="manageqr-btn manageqr-btn-qr"
-            onClick={() => handleViewQR(order.qr_id)}
-            disabled={!order.qr_id}
-          >
-            <FaEye />
-          </button>
-        </td>
-      </tr>
-    ))
-  ) : (
-    <tr>
-      <td colSpan="5" className="manageqr-no-data">Không có dữ liệu.</td>
-    </tr>
-  )}
-</tbody>
+                      <tbody>
+                        {renderOrderRows(
+                          paginatedOrders,
+                          currentPage,
+                          ITEMS_PER_PAGE,
+                          handleViewFrame,
+                          handleViewQR
+                        )}
+                      </tbody>
                     </table>
                   </div>
 
@@ -408,13 +464,24 @@ const filteredOrders = useMemo(() => {
                         Hiển thị {startItem} - {endItem} trên {filteredOrders.length} đơn chụp
                       </span>
                       <div className="pagination-buttons">
-                        <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>«</button>
+                        <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>
+                          «
+                        </button>
                         {[...Array(totalPages)].map((_, i) => (
-                          <button key={i + 1} onClick={() => goToPage(i + 1)} className={currentPage === i + 1 ? 'active' : ''}>
+                          <button
+                            key={i + 1}
+                            onClick={() => goToPage(i + 1)}
+                            className={currentPage === i + 1 ? 'active' : ''}
+                          >
                             {i + 1}
                           </button>
                         ))}
-                        <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}>»</button>
+                        <button
+                          onClick={() => goToPage(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                        >
+                          »
+                        </button>
                       </div>
                     </div>
                   )}
@@ -427,7 +494,7 @@ const filteredOrders = useMemo(() => {
               <h3 className="manageqr-top-frames-title">Top 5 Khung Ảnh Phổ Biến</h3>
               {loadingTopFrames ? (
                 <div className="manageqr-loading">Đang tải...</div>
-              ) : topFrames.length > 0 ? (
+              ) : (
                 <div className="manageqr-top-frames-table-wrapper">
                   <table className="manageqr-top-frames-table">
                     <thead>
@@ -438,33 +505,9 @@ const filteredOrders = useMemo(() => {
                       </tr>
                     </thead>
                     <tbody>
-                      {topFrames.map((item, index) => (
-                        <tr key={item.id_frame}>
-                          <td>{index + 1}</td>
-                          <td>
-                            {item.frame ? (
-                              <img
-                                src={item.frame}
-                                alt={`Khung ${item.id_frame}`}
-                                className="manageqr-top-frame-preview"
-                                onError={(e) => {
-                                  e.target.alt = 'Ảnh lỗi';
-                                  e.target.style.display = 'none';
-                                }}
-                              />
-                            ) : (
-                              <span className="manageqr-no-image">—</span>
-                            )}
-                          </td>
-                          <td>{item.usage_count}</td>
-                        </tr>
-                      ))}
+                      {renderTopFramesRows(topFrames)}
                     </tbody>
                   </table>
-                </div>
-              ) : (
-                <div className="manageqr-no-data" style={{ textAlign: 'center', marginTop: '12px' }}>
-                  Chưa có dữ liệu khung ảnh.
                 </div>
               )}
             </div>

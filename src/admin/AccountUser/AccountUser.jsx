@@ -1,7 +1,72 @@
 // src/admin/Page/AccountUser/AccountUser.jsx
 import React, { useEffect, useState, useRef } from 'react';
 import Navbar from '../../components/Navbar';
-import './AccountUser.css'; // hoặc import './ContentChat.css' nếu muốn dùng chung
+import './AccountUser.css';
+
+// ✅ HÀM RENDER HEADER TABLE — ĐẢM BẢO KHÔNG CÓ WHITESPACE
+const renderTableHeader = (selectAllGlobal, isCurrentPageFullySelected, toggleSelectAllGlobal) => (
+  <tr>
+    <th style={{ width: '50px', textAlign: 'center' }}>
+      <input
+        type="checkbox"
+        checked={selectAllGlobal || isCurrentPageFullySelected}
+        onChange={toggleSelectAllGlobal}
+        className="custom-checkbox"
+      />
+    </th>
+    <th>STT</th>
+    <th>USERNAME</th>
+    <th>EMAIL</th>
+    <th>SỰ KIỆN</th>
+    <th>VAI TRÒ</th>
+    <th style={{ textAlign: 'center' }}>HÀNH ĐỘNG</th>
+  </tr>
+);
+
+// ✅ HÀM RENDER BODY TABLE — AN TOÀN
+const renderTableBody = (loading, users, currentPage, itemsPerPage, selectedIds, toggleSelectId, getTopicName, getRoleLabel, openEditModal, openDeleteModal) => {
+  if (loading) {
+    return (
+      <tr>
+        <td colSpan="7" style={{ textAlign: 'center' }}>Đang tải...</td>
+      </tr>
+    );
+  }
+
+  if (users.length === 0) {
+    return (
+      <tr>
+        <td colSpan="7" style={{ textAlign: 'center' }}>Không có dữ liệu</td>
+      </tr>
+    );
+  }
+
+  return users.map((user, index) => (
+    <tr key={user.id} className={selectedIds.includes(user.id) ? 'selected-row' : ''}>
+      <td style={{ textAlign: 'center' }}>
+        <input
+          type="checkbox"
+          checked={selectedIds.includes(user.id)}
+          onChange={() => toggleSelectId(user.id)}
+          className="custom-checkbox"
+        />
+      </td>
+      <td>{(currentPage - 1) * itemsPerPage + index + 1}</td>
+      <td>{user.username}</td>
+      <td>{user.email}</td>
+      <td>{getTopicName(user.id_topic)}</td>
+      <td>{getRoleLabel(user.role)}</td>
+      <td className="contentchat-actions">
+        <button onClick={() => openEditModal(user)} className="edit-btn">
+          <i className="bi bi-pencil"></i>
+        </button>
+        <button onClick={() => openDeleteModal(user)} className="delete-btn">
+          <i className="bi bi-trash"></i>
+        </button>
+      </td>
+    </tr>
+  ));
+};
 
 const AccountUser = () => {
   const getAuth = () => {
@@ -21,10 +86,8 @@ const AccountUser = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
 
-  // Danh sách chủ đề (events)
   const [topics, setTopics] = useState([]);
 
-  // Modal
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -35,11 +98,10 @@ const AccountUser = () => {
     email: '',
     password: '',
     id_topic: '',
-    role: '0', // '0' = người dùng, '1' = nhân viên
+    role: '0',
     id_admin: id_admin || ''
   });
 
-  // === XÓA HÀNG LOẠT ===
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectAllGlobal, setSelectAllGlobal] = useState(false);
 
@@ -48,8 +110,7 @@ const AccountUser = () => {
 
   const roleFilterRef = useRef(null);
 
-  // -----------------------------------------------------------------
-  // FETCH USERS
+  // === FETCH FUNCTIONS ===
   const fetchUsers = async (page = 1) => {
     if (!id_admin) return;
     setLoading(true);
@@ -77,7 +138,6 @@ const AccountUser = () => {
     }
   };
 
-  // FETCH TOPICS (EVENTS)
   const fetchTopics = async () => {
     if (!id_admin) return;
     try {
@@ -104,7 +164,6 @@ const AccountUser = () => {
     return () => clearTimeout(timer);
   }, [searchTerm, roleFilter]);
 
-  // Click outside role filter
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (roleFilterRef.current && !roleFilterRef.current.contains(e.target)) {
@@ -115,8 +174,6 @@ const AccountUser = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // -----------------------------------------------------------------
-  // CHỌN TẤT CẢ
   const toggleSelectAllGlobal = async () => {
     if (selectAllGlobal) {
       setSelectedIds([]);
@@ -283,14 +340,12 @@ const AccountUser = () => {
     return role === 0 ? 'Người dùng' : 'Nhân viên';
   };
 
-  // 🔑 HÀM TRA CỨU TÊN CHỦ ĐỀ TỪ ID
   const getTopicName = (topicId) => {
     if (!topicId) return '—';
     const topic = topics.find(t => String(t.id) === String(topicId));
     return topic ? topic.name : `ID: ${topicId}`;
   };
 
-  // -----------------------------------------------------------------
   return (
     <div className="contentchat-root">
       <Navbar sidebarCollapsed={sidebarCollapsed} onToggleSidebar={toggleSidebar} id={id_admin} username={adminName} />
@@ -372,54 +427,20 @@ const AccountUser = () => {
           <div className="contentchat-table-wrapper">
             <table className="contentchat-table">
               <thead>
-                <tr>
-                  <th style={{ width: '50px', textAlign: 'center' }}>
-                    <input
-                      type="checkbox"
-                      checked={selectAllGlobal || isCurrentPageFullySelected}
-                      onChange={toggleSelectAllGlobal}
-                      className="custom-checkbox"
-                    />
-                  </th>
-                  <th>STT</th>
-                  <th>USERNAME</th>
-                  <th>EMAIL</th>
-                  <th>SỰ KIỆN</th> {/* ← ĐÃ ĐỔI TÊN CỘT */}
-                  <th>VAI TRÒ</th>
-                  <th style={{ textAlign: 'center' }}>HÀNH ĐỘNG</th>
-                </tr>
+                {renderTableHeader(selectAllGlobal, isCurrentPageFullySelected, toggleSelectAllGlobal)}
               </thead>
               <tbody>
-                {loading ? (
-                  <tr><td colSpan="7" style={{ textAlign: 'center' }}>Đang tải...</td></tr>
-                ) : users.length === 0 ? (
-                  <tr><td colSpan="7" style={{ textAlign: 'center' }}>Không có dữ liệu</td></tr>
-                ) : (
-                  users.map((user, index) => (
-                    <tr key={user.id} className={selectedIds.includes(user.id) ? 'selected-row' : ''}>
-                      <td style={{ textAlign: 'center' }}>
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(user.id)}
-                          onChange={() => toggleSelectId(user.id)}
-                          className="custom-checkbox"
-                        />
-                      </td>
-                      <td>{(currentPage - 1) * itemsPerPage + index + 1}</td>
-                      <td>{user.username}</td>
-                      <td>{user.email}</td>
-                      <td>{getTopicName(user.id_topic)}</td> {/* ← HIỂN THỊ TÊN CHỦ ĐỀ */}
-                      <td>{getRoleLabel(user.role)}</td>
-                      <td className="contentchat-actions">
-                        <button onClick={() => openEditModal(user)} className="edit-btn">
-                          <i className="bi bi-pencil"></i>
-                        </button>
-                        <button onClick={() => openDeleteModal(user)} className="delete-btn">
-                          <i className="bi bi-trash"></i>
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                {renderTableBody(
+                  loading,
+                  users,
+                  currentPage,
+                  itemsPerPage,
+                  selectedIds,
+                  toggleSelectId,
+                  getTopicName,
+                  getRoleLabel,
+                  openEditModal,
+                  openDeleteModal
                 )}
               </tbody>
             </table>

@@ -38,7 +38,7 @@ const Rating = () => {
     if (!id_admin) return;
     setLoading(true);
     try {
-      let url = `${API_URL}/ratings?page=${page}&limit=${itemsPerPage}`;
+      let url = `${API_URL}/ratings?page=${page}&limit=${itemsPerPage}&id_admin=${id_admin}`;
       if (search) url += `&search=${encodeURIComponent(search)}`;
       
       // Gửi filter param đến backend
@@ -108,7 +108,7 @@ const Rating = () => {
 
     setLoading(true);
     try {
-      let url = `${API_URL}/ratings?limit=${totalRatings}&page=1`;
+let url = `${API_URL}/ratings?page=${page}&limit=${itemsPerPage}&id_admin=${id_admin}`;
       if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
       if (filterType === 'latest') url += `&filter=today`;
       if (filterType === 'recent_month') url += `&filter=month`;

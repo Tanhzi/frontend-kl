@@ -330,7 +330,7 @@ const Manageqr = () => {
       return;
     }
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/qr-image?session_id=${qrId}`);
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/qr-image?id_qr=${qrId}`);
       if (!res.ok) {
         const errorText = await res.text();
         throw new Error(`Không tìm thấy mã QR: ${errorText}`);

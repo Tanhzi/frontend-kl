@@ -232,14 +232,14 @@ if (config.video === 1) {
   }, [photos, id_admin, doNotSaveToWeb]);
 
   // === API functions ===
-  const uploadCollection = async (filesToUpload, sessionId, downloadLink) => {
+  const uploadCollection = async (filesToUpload, id_qr, downloadLink) => {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/media`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           files: filesToUpload,
-          session_id: sessionId,
+          id_qr: id_qr,
           id_admin: id_admin,
           download_link: downloadLink,
         }),
@@ -250,12 +250,12 @@ if (config.video === 1) {
     }
   };
 
-  const sendQrEmail = async (email, sessionId) => {
+  const sendQrEmail = async (email, id_qr) => {
     try {
       await fetch(`${import.meta.env.VITE_API_BASE_URL}/send-qr-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, session_id: sessionId }),
+        body: JSON.stringify({ email, id_qr: id_qr }),
       });
       setEmailSent(true);
     } catch (err) {
@@ -281,11 +281,11 @@ const sendOriginalImagesEmail = async (email, images, gifData = null) => {
   }
 
   try {
-    const sessionId = generateSessionId();
+    const id_qr = generateSessionId();
     const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/send-original-images-email`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, session_id: sessionId, images: validImages }),
+      body: JSON.stringify({ email, id_qr: id_qr, images: validImages }),
     });
 
     if (!response.ok) {
@@ -330,12 +330,12 @@ const sendOriginalImagesEmail = async (email, images, gifData = null) => {
     try {
       let finalImageToSend = finalImage;
       let qrDataUrl = null;
-      let sessionId = null;
+      let id_qr = null;
       let downloadLink = null;
 
       if (!doNotSaveToWeb) {
-        sessionId = generateSessionId();
-        downloadLink = `${import.meta.env.VITE_API_BASE_URL}/download?session_id=${sessionId}`;
+        id_qr = generateSessionId();
+        downloadLink = `${import.meta.env.VITE_API_BASE_URL}/download?id_qr=${id_qr}`;
         qrDataUrl = await QRCode.toDataURL(downloadLink, { width: 256, margin: 2 });
 
         if (showQrOverlay) {
@@ -386,7 +386,7 @@ const sendOriginalImagesEmail = async (email, images, gifData = null) => {
         }
       }
 
-      const idQrToSave = doNotSaveToWeb ? null : sessionId;
+      const idQrToSave = doNotSaveToWeb ? null : id_qr;
       const updateSuccess = await updateIdFrameAndIdQr(id_pay, id_frame, idQrToSave, emailTrimmed || null);
       if (!updateSuccess) {
         setIsContinuing(false);
@@ -415,9 +415,9 @@ const sendOriginalImagesEmail = async (email, images, gifData = null) => {
         if (videoConfig?.video === 1 && gifBase64) {
           filesToUpload.push({ data: gifBase64, type: 'gif' });
         }
-        uploadCollection(filesToUpload, sessionId, downloadLink);
+        uploadCollection(filesToUpload, id_qr, downloadLink);
         if (emailTrimmed) {
-          sendQrEmail(emailTrimmed, sessionId);
+          sendQrEmail(emailTrimmed, id_qr);
         }
       }
     } catch (err) {

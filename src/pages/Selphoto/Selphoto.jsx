@@ -675,9 +675,9 @@ const SelPhoto = () => {
 
   const { formattedCountdown, countdown } = useCountdown();
 
-  const navigateToFrame = async (finalSlotsOverride = null) => {
-    let finalSlots = finalSlotsOverride || [...selectedSlots];
-
+const navigateToFrame = () => {
+    // Kiểm tra xem đã điền đủ ảnh chưa, nếu chưa thì tự động điền ảnh thừa vào
+    let finalSlots = [...selectedSlots];
     if (finalSlots.some(slot => slot === null)) {
       const used = new Set(finalSlots.filter(Boolean).map(item => item.photo));
       for (let i = 0; i < finalSlots.length; i++) {
@@ -691,27 +691,24 @@ const SelPhoto = () => {
       }
     }
 
-    try {
-      const compositeImage = await generateCompositeImage(finalSlots, cut);
-      navigate('/Frame', {
-        state: {
-          photos,
-          compositeImage,
-          frameType: location.state?.frameType,
-          size,
-          cut,
-          selectedSlots: finalSlots,
-          selectedFrameId: selectedFrameId,
-          selectedFrame: selectedFrame,
-          imageStickers: imageStickers 
-        }
-      });
-    } catch (error) {
-      console.error("Lỗi tạo ảnh tổng hợp:", error);
-    }
+    // Chỉ chuyển dữ liệu thô (raw data) sang trang Frame
+    navigate('/Frame', {
+      state: {
+        photos: photos,                 // Danh sách ảnh gốc chụp được
+        // compositeImage: null,        // Bỏ cái này
+        frameType: location.state?.frameType,
+        size: size,
+        cut: cut,
+        selectedSlots: finalSlots,      // Ảnh đã chọn vào các ô (bao gồm cả ảnh đã sửa/AI)
+        selectedFrameId: selectedFrameId,
+        selectedFrame: selectedFrame,
+        imageStickers: imageStickers    // Tọa độ sticker
+      }
+    });
   };
 
-  const handleContinue = () => {
+const handleContinue = () => {
+    // Làm sạch sticker (chỉ lấy sticker nằm trong khung 0-100%)
     const cleanedStickers = {};
     Object.keys(imageStickers).forEach(imgIndex => {
       const stickers = imageStickers[imgIndex] || [];
@@ -720,26 +717,20 @@ const SelPhoto = () => {
       );
     });
     setImageStickers(cleanedStickers);
+
+    // Chuyển trang ngay lập tức, không cần chờ generate ảnh
     setTimeout(() => {
       navigateToFrame();
     }, 100);
   };
 
+  // Sửa cả useEffect countdown để dùng logic mới
   useEffect(() => {
     if (countdown === 0) {
-      const cleanedStickers = {};
-      Object.keys(imageStickers).forEach(imgIndex => {
-        const stickers = imageStickers[imgIndex] || [];
-        cleanedStickers[imgIndex] = stickers.filter(s =>
-          s.x >= 5 && s.x <= 95 && s.y >= 5 && s.y <= 95
-        );
-      });
-      setImageStickers(cleanedStickers);
-      setTimeout(() => {
-        navigateToFrame();
-      }, 100);
+      handleContinue();
     }
   }, [countdown]);
+
 
   useEffect(() => {
     const areAllSlotsFilled = selectedSlots.every(slot => slot !== null);

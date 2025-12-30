@@ -119,8 +119,8 @@ function Frame() {
     });
   };
 
-  // ===========================================================================
-  // 1. THUẬT TOÁN TÌM VÙNG TRONG SUỐT (ĐÃ NÂNG CẤP XỬ LÝ HÌNH DỌC)
+// ===========================================================================
+  // 1. THUẬT TOÁN TÌM VÙNG TRONG SUỐT (FINAL STANDARD)
   // ===========================================================================
   const detectTransparentSlots = (frameImg, width, height) => {
     const canvas = document.createElement('canvas');
@@ -136,126 +136,95 @@ function Frame() {
     const slots = [];
 
     const getIdx = (x, y) => (y * width + x) * 4;
+    const step = 2; // Quét chi tiết
 
-    for (let y = 0; y < height; y += 4) {
-      for (let x = 0; x < width; x += 4) {
+    for (let y = 0; y < height; y += step) {
+      for (let x = 0; x < width; x += step) {
+        if (visited[y * width + x]) continue;
+        
         const idx = getIdx(x, y);
         const alpha = data[idx + 3];
 
-        if (alpha < 50 && visited[y * width + x] === 0) {
-          const currentSlotPixels = []; 
-          let sumX = 0, sumY = 0;
-          
-          // Các biến để theo dõi khung bao (bounding box) thẳng đứng
+        if (alpha < 50) {
+          let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0, sumYY = 0;
+          let count = 0;
           let minX = width, maxX = 0, minY = height, maxY = 0;
-
+          
           const queue = [{x, y}];
           visited[y * width + x] = 1;
-          
-          // Init bounding box cho điểm đầu tiên
-          minX = x; maxX = x; minY = y; maxY = y;
-          currentSlotPixels.push({x, y});
-          sumX += x; sumY += y;
 
           while (queue.length > 0) {
             const p = queue.pop();
-            const px = p.x;
+            const px = p.x; 
             const py = p.y;
+            
+            sumX += px; sumY += py;
+            sumXX += px * px; sumYY += py * py;
+            sumXY += px * py;
+            count++;
+
+            if (px < minX) minX = px;
+            if (px > maxX) maxX = px;
+            if (py < minY) minY = py;
+            if (py > maxY) maxY = py;
 
             const neighbors = [
-              {nx: px + 4, ny: py}, {nx: px - 4, ny: py},
-              {nx: px, ny: py + 4}, {nx: px, ny: py - 4}
+              {nx: px + step, ny: py}, {nx: px - step, ny: py},
+              {nx: px, ny: py + step}, {nx: px, ny: py - step}
             ];
 
             for (let n of neighbors) {
               if (n.nx >= 0 && n.nx < width && n.ny >= 0 && n.ny < height) {
                 const nIdx = n.ny * width + n.nx;
-                if (visited[nIdx] === 0) {
-                  const currentAlpha = data[getIdx(n.nx, n.ny) + 3];
-                  if (currentAlpha < 50) {
+                if (!visited[nIdx]) {
+                  const a = data[getIdx(n.nx, n.ny) + 3];
+                  if (a < 50) {
                      visited[nIdx] = 1;
                      queue.push({x: n.nx, y: n.ny});
-                     
-                     currentSlotPixels.push({x: n.nx, y: n.ny});
-                     sumX += n.nx;
-                     sumY += n.ny;
-                     
-                     // Cập nhật khung bao thẳng
-                     if (n.nx < minX) minX = n.nx;
-                     if (n.nx > maxX) maxX = n.nx;
-                     if (n.ny < minY) minY = n.ny;
-                     if (n.ny > maxY) maxY = n.ny;
                   }
                 }
               }
             }
           }
 
-          const N = currentSlotPixels.length;
-          if (N > 100) {
-             const centerX = sumX / N;
-             const centerY = sumY / N;
+          if (count > 100 && (maxX - minX) > 20) {
+             const meanX = sumX / count;
+             const meanY = sumY / count;
+             const varX = (sumXX / count) - (meanX * meanX);
+             const varY = (sumYY / count) - (meanY * meanY);
+             const covXY = (sumXY / count) - (meanX * meanY);
 
-             // Tính toán PCA để tìm góc nghiêng
-             let u20 = 0, u02 = 0, u11 = 0;
-             for(let p of currentSlotPixels) {
-                 const dx = p.x - centerX;
-                 const dy = p.y - centerY;
-                 u20 += dx * dx;
-                 u02 += dy * dy;
-                 u11 += dx * dy;
-             }
-             const theta = 0.5 * Math.atan2(2 * u11, u20 - u02);
-             const degrees = theta * (180 / Math.PI);
+             const delta = varX - varY;
+             const rotationRad = 0.5 * Math.atan2(2 * covXY, delta);
+             
+             const discrimination = Math.sqrt(delta * delta + 4 * covXY * covXY);
+             const lambda1 = 0.5 * (varX + varY + discrimination); // Trục lớn
+             const lambda2 = 0.5 * (varX + varY - discrimination); // Trục nhỏ
+             const pcaWidth = Math.sqrt(Math.abs(lambda1) * 12); 
+             const pcaHeight = Math.sqrt(Math.abs(lambda2) * 12);
 
-             // === LOGIC XỬ LÝ KHUNG DỌC ===
-             let finalRotation = theta;
-             let finalWidth = 0;
-             let finalHeight = 0;
+             // --- LOGIC GÓC NGHIÊNG ---
+             const degree = rotationRad * (180 / Math.PI);
+             const absDeg = Math.abs(degree);
+             // Ngưỡng 10 độ: Dưới 10 độ coi như thẳng
+             const isStraight = absDeg < 10 || Math.abs(absDeg - 90) < 10 || Math.abs(absDeg - 180) < 10;
 
-             // Tính kích thước khung bao thẳng đứng
-             const boundingBoxWidth = maxX - minX;
-             const boundingBoxHeight = maxY - minY;
-             const aspectRatio = boundingBoxHeight / boundingBoxWidth;
-
-             // ĐIỀU KIỆN: Nếu là hình chữ nhật đứng (Cao > Rộng rõ rệt) 
-             // VÀ góc phát hiện được là trục dọc (> 45 độ hoặc < -45 độ)
-             if (aspectRatio > 1.2 && Math.abs(degrees) > 45) {
-                // ĐÂY LÀ KHUNG DỌC -> ÉP KHÔNG XOAY
-                finalRotation = 0;
-                finalWidth = boundingBoxWidth;
-                finalHeight = boundingBoxHeight;
-             } else {
-                // ĐÂY LÀ KHUNG NGHIÊNG HOẶC NGANG -> GIỮ NGUYÊN XOAY
-                // Tính chiều rộng/cao theo trục xoay
-                let minRotX = Infinity, maxRotX = -Infinity;
-                let minRotY = Infinity, maxRotY = -Infinity;
-                const cosT = Math.cos(-theta);
-                const sinT = Math.sin(-theta);
-
-                for(let p of currentSlotPixels) {
-                    const dx = p.x - centerX;
-                    const dy = p.y - centerY;
-                    const rotX = dx * cosT - dy * sinT;
-                    const rotY = dx * sinT + dy * cosT;
-                    if(rotX < minRotX) minRotX = rotX;
-                    if(rotX > maxRotX) maxRotX = rotX;
-                    if(rotY < minRotY) minRotY = rotY;
-                    if(rotY > maxRotY) maxRotY = rotY;
-                }
-                finalWidth = maxRotX - minRotX;
-                finalHeight = maxRotY - minRotY;
-             }
-
-             if (finalWidth > 20 && finalHeight > 20) {
-                slots.push({
-                   centerX, 
-                   centerY,
-                   innerWidth: finalWidth, 
-                   innerHeight: finalHeight,
-                   rotation: finalRotation
-                });
-             }
+             slots.push({
+               // Thông số dùng để xoay
+               centerX: meanX,
+               centerY: meanY,
+               rotation: isStraight ? 0 : rotationRad, 
+               realWidth: pcaWidth,
+               realHeight: pcaHeight,
+               
+               // Thông số dùng để vẽ thẳng (AABB)
+               aabbX: minX, 
+               aabbY: minY,
+               aabbWidth: maxX - minX,
+               aabbHeight: maxY - minY,
+               
+               isStraight: isStraight
+             });
           }
         }
       }
@@ -263,15 +232,15 @@ function Frame() {
 
     slots.sort((a, b) => {
       const yDiff = Math.abs(a.centerY - b.centerY);
-      if (yDiff > 100) return a.centerY - b.centerY;
+      if (yDiff > 50) return a.centerY - b.centerY;
       return a.centerX - b.centerX;
     });
 
     return slots;
   };
-
-  // ===========================================================================
-  // 2. HÀM VẼ THÔNG MINH (UPDATED)
+// ===========================================================================
+// ===========================================================================
+  // 2. HÀM VẼ (FIX GAP: SCALE ẢNH LỚN HƠN VÙNG CHỌN)
   // ===========================================================================
   const drawCompositeHighRes = async (canvasWidth, canvasHeight, frameObj) => {
     const canvas = document.createElement('canvas');
@@ -280,40 +249,46 @@ function Frame() {
     const ctx = canvas.getContext('2d');
 
     const frameImg = await loadImage(frameObj.frame);
-
     let slotsToDraw = detectTransparentSlots(frameImg, canvasWidth, canvasHeight);
+    
+    // Kiểm tra null an toàn
+    const safeSelectedSlots = selectedSlots || [];
+    const userImages = await Promise.all(safeSelectedSlots.map(s => s && s.photo ? loadImage(s.photo) : null));
 
-    if (slotsToDraw.length === 0) {
-       console.warn("Không tìm thấy vùng trong suốt.");
-    }
-
-    const userImages = await Promise.all(selectedSlots.map(s => s && s.photo ? loadImage(s.photo) : null));
-
-    // --- BƯỚC 1: VẼ ẢNH USER (LAYER DƯỚI) ---
+    // --- BƯỚC 1: VẼ ẢNH USER ---
     slotsToDraw.forEach((slotInfo, idx) => {
-        if (idx >= selectedSlots.length || !userImages[idx]) return;
+        if (idx >= safeSelectedSlots.length || !userImages[idx]) return;
         
         const userImg = userImages[idx];
-        const userSlotData = selectedSlots[idx];
-        
-        // Mở rộng 2% để tràn viền
-        const expandRatio = 0.02; 
-        
-        const realW = slotInfo.innerWidth;
-        const realH = slotInfo.innerHeight;
-        
-        const expandW = realW * expandRatio;
-        const expandH = realH * expandRatio;
+        const userSlotData = safeSelectedSlots[idx];
 
-        const targetW = realW + (expandW * 2);
-        const targetH = realH + (expandH * 2);
+        // --- CHIẾN THUẬT LẤP ĐẦY KHOẢNG TRẮNG ---
+        let baseW, baseH;
 
-        // Object-fit: COVER logic
+        if (slotInfo.isStraight) {
+            // Nếu là hình thẳng (hoặc đám mây/tim được ép thẳng):
+            // Dùng kích thước hộp bao (AABB) để đảm bảo phủ kín từ trái sang phải
+            baseW = slotInfo.aabbWidth;
+            baseH = slotInfo.aabbHeight;
+        } else {
+            // Nếu là hình nghiêng:
+            // Dùng kích thước PCA, nhưng lấy MAX giữa PCA và AABB*0.8 để tránh trường hợp PCA tính quá nhỏ
+            baseW = Math.max(slotInfo.realWidth, slotInfo.aabbWidth * 0.8);
+            baseH = Math.max(slotInfo.realHeight, slotInfo.aabbHeight * 0.8);
+        }
+
+        // QUAN TRỌNG: Mở rộng vùng vẽ thêm 20% (0.2)
+        // Việc này đảm bảo ảnh luôn to hơn cái lỗ, bất kể xoay hay méo.
+        // Phần thừa sẽ bị cắt bởi lệnh ctx.clip()
+        const expandRatio = 0.2; 
+        const targetW = baseW * (1 + expandRatio);
+        const targetH = baseH * (1 + expandRatio);
+        
+        // Tính tỷ lệ COVER
         const targetRatio = targetW / targetH;
         const imgRatio = userImg.width / userImg.height;
         
         let drawW, drawH;
-
         if (imgRatio > targetRatio) { 
           drawH = targetH;
           drawW = targetH * imgRatio;
@@ -324,74 +299,74 @@ function Frame() {
 
         ctx.save();
         
-        // Dời về tâm và xoay (nếu slot dọc thì rotation = 0)
-        ctx.translate(slotInfo.centerX, slotInfo.centerY);
+        // 1. Dời bút về tâm hình
+        // Nếu thẳng thì dùng tâm hộp bao, nếu nghiêng dùng tâm PCA
+        const cx = slotInfo.isStraight ? (slotInfo.aabbX + slotInfo.aabbWidth/2) : slotInfo.centerX;
+        const cy = slotInfo.isStraight ? (slotInfo.aabbY + slotInfo.aabbHeight/2) : slotInfo.centerY;
+        
+        ctx.translate(cx, cy);
         ctx.rotate(slotInfo.rotation);
 
+        // 2. Tạo đường cắt (Clip)
         ctx.beginPath();
+        // Vẽ vùng cắt lớn hơn một chút để đảm bảo
         ctx.rect(-targetW / 2, -targetH / 2, targetW, targetH);
         ctx.clip();
 
-        const drawX = -drawW / 2;
+        // 3. Vẽ ảnh
+        const drawX = -drawW / 2; 
         const drawY = -drawH / 2;
-        
+
         if (userSlotData.flip) {
             ctx.scale(-1, 1);
-            ctx.drawImage(userImg, drawX, drawY, drawW, drawH);
-        } else {
-            ctx.drawImage(userImg, drawX, drawY, drawW, drawH);
         }
+        
+        ctx.drawImage(userImg, drawX, drawY, drawW, drawH);
         
         ctx.restore();
     });
     
-    // --- BƯỚC 2: VẼ STICKER (LAYER GIỮA) ---
+    // --- BƯỚC 2: VẼ STICKER (Dùng tọa độ AABB cho an toàn) ---
     for (let idx = 0; idx < slotsToDraw.length; idx++) {
-        if (idx >= selectedSlots.length) continue;
+        if (idx >= safeSelectedSlots.length) continue;
         const slotInfo = slotsToDraw[idx];
         const stickers = imageStickers ? imageStickers[idx] : [];
         
         if (stickers && stickers.length > 0) {
             ctx.save();
-            
-            ctx.translate(slotInfo.centerX, slotInfo.centerY);
-            ctx.rotate(slotInfo.rotation);
-            
             ctx.beginPath();
-            ctx.rect(-slotInfo.innerWidth / 2, -slotInfo.innerHeight / 2, slotInfo.innerWidth, slotInfo.innerHeight);
+            ctx.rect(slotInfo.aabbX, slotInfo.aabbY, slotInfo.aabbWidth, slotInfo.aabbHeight);
             ctx.clip();
 
             for (const sticker of stickers) {
                 if (sticker.x >= 5 && sticker.x <= 95 && sticker.y >= 5 && sticker.y <= 95) {
                     try {
                         const sImg = await loadImage(sticker.src);
-                        const sX = (sticker.x / 100 - 0.5) * slotInfo.innerWidth;
-                        const sY = (sticker.y / 100 - 0.5) * slotInfo.innerHeight;
+                        const sX = slotInfo.aabbX + (sticker.x / 100) * slotInfo.aabbWidth;
+                        const sY = slotInfo.aabbY + (sticker.y / 100) * slotInfo.aabbHeight;
 
-                        ctx.save();
-                        ctx.translate(sX, sY); 
-                        ctx.rotate((sticker.rotation * Math.PI) / 180); 
+                        ctx.translate(sX, sY);
+                        ctx.rotate((sticker.rotation * Math.PI) / 180);
                         
-                        const baseSize = slotInfo.innerHeight * 0.25;
+                        const baseSize = Math.min(slotInfo.aabbWidth, slotInfo.aabbHeight) * 0.25; 
                         const finalSize = baseSize * sticker.scale; 
 
                         ctx.drawImage(sImg, -finalSize/2, -finalSize/2, finalSize, finalSize);
-                        ctx.restore();
-                    } catch (e) { console.error("Lỗi vẽ sticker", e); }
+                        ctx.translate(-sX, -sY);
+                    } catch (e) { }
                 }
             }
             ctx.restore();
         }
     }
 
-    // --- BƯỚC 3: VẼ KHUNG ĐÈ LÊN TRÊN CÙNG ---
+    // --- BƯỚC 3: VẼ KHUNG ---
     ctx.drawImage(frameImg, 0, 0, canvasWidth, canvasHeight);
 
     return canvas;
   };
-
   // ===========================================================================
-  // 3. GENERATE VÀ RENDER
+  // 3. GENERATE VÀ RENDER (GIỮ NGUYÊN LOGIC GỌI HÀM)
   // ===========================================================================
   const generateFinalImage = async () => {
     if (!currentPreviewFrameId || framesList.length === 0) return null;

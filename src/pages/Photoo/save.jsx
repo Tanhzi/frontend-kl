@@ -5,6 +5,7 @@ import Chatbot from '../../components/Chatbot';
 import { useCountdown } from "../../contexts/CountdownContext";
 
 function Photo() {
+  // Lấy thông tin từ auth
   const getAuth = () => {
     const saved = localStorage.getItem('auth');
     return saved ? JSON.parse(saved) : null;
@@ -13,25 +14,29 @@ function Photo() {
   const [auth, setAuth] = useState(getAuth());
   const { id_admin } = auth || {};
 
-  const [shootCountdown, setShootCountdown] = useState(0); // đếm ngược trước mỗi lần chụp
+  const [countdown2, setCountdown] = useState(5);
   const [photoIndex, setPhotoIndex] = useState(1);
   const [photos, setPhotos] = useState([]);
   const [flash, setFlash] = useState(false);
   const [isMirror, setIsMirror] = useState(false);
   
+  // Settings mặc định
   const [initialTime, setInitialTime] = useState(5);
   const [subsequentTime, setSubsequentTime] = useState(8);
-  const [isStarted, setIsStarted] = useState(false);
+  
+  const [isStarted, setIsStarted] = useState(true);
   const [maxPhotos, setMaxPhotos] = useState(8);
   const [isRetaking, setIsRetaking] = useState(false);
   const [retakeIndex, setRetakeIndex] = useState(null);
   
+  // Lưu state cũ để back về
   const [currentPhotosState, setCurrentPhotosState] = useState([]);
   const [currentSelectedSlotsState, setCurrentSelectedSlotsState] = useState([]);
   const [currentAppliedFiltersState, setCurrentAppliedFiltersState] = useState({});
-  const [previewCrop, setPreviewCrop] = useState(null);
 
+  const [previewCrop, setPreviewCrop] = useState(null);
   const photosContainerRef = useRef(null);
+
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -77,34 +82,52 @@ function Photo() {
     }
   }, [countdown, navigate]);
 
+  // === [OPTIMIZED] TÍNH TOÁN CẮT ẢNH CHUẨN XÁC ===
   const getCropDimensions = (cutValue, videoWidth, videoHeight) => {
     const cutNum = Number(cutValue);
     let targetAspectRatio;
+
+    // Tỉ lệ chuẩn pixel dựa trên logic render ở SelPhoto
+    // Đảm bảo ảnh cắt ra vừa khít khung, không bị méo
     switch (cutNum) {
-      case 3: targetAspectRatio = 276 / 220; break;
-      case 41: targetAspectRatio = 276 / 195; break;
-      case 42: targetAspectRatio = 260 / 330; break;
-      case 6: targetAspectRatio = 280 / 240; break;
-      default: targetAspectRatio = 1;
+      case 3:
+        targetAspectRatio = 276 / 220; // ~1.25
+        break;
+      case 41:
+        targetAspectRatio = 276 / 195; // ~1.41
+        break;
+      case 42:
+        targetAspectRatio = 260 / 330; // ~0.78 (Khung dọc)
+        break;
+      case 6:
+        targetAspectRatio = 280 / 240; // ~1.16
+        break;
+      default:
+        targetAspectRatio = 1; // Mặc định vuông
     }
 
     const videoAspectRatio = videoWidth / videoHeight;
     let cropWidth, cropHeight, cropX, cropY;
 
+    // Logic: Cắt giữ nguyên chiều lớn nhất có thể (Max Resolution Crop)
     if (videoAspectRatio > targetAspectRatio) {
+      // Video bè hơn khung -> Giữ full chiều cao, cắt bớt chiều rộng
       cropHeight = videoHeight;
       cropWidth = Math.round(cropHeight * targetAspectRatio);
       cropX = Math.round((videoWidth - cropWidth) / 2);
       cropY = 0;
     } else {
+      // Video cao hơn khung -> Giữ full chiều rộng, cắt bớt chiều cao
       cropWidth = videoWidth;
       cropHeight = Math.round(cropWidth / targetAspectRatio);
       cropX = 0;
       cropY = Math.round((videoHeight - cropHeight) / 2);
     }
+
     return { cropWidth, cropHeight, cropX, cropY };
   };
 
+  // Cập nhật khung preview trên màn hình (chỉ để hiển thị cho user thấy vùng sẽ chụp)
   const updatePreviewCrop = () => {
     const video = videoRef.current;
     if (!video || !video.videoWidth || !video.videoHeight || !cut) return;
@@ -137,15 +160,21 @@ function Photo() {
     const scaleX = displayWidth / video.videoWidth;
     const scaleY = displayHeight / video.videoHeight;
 
+    const visibleWidth = cropWidth * scaleX;
+    const visibleHeight = cropHeight * scaleY;
+    const visibleX = offsetX + cropX * scaleX;
+    const visibleY = offsetY + cropY * scaleY;
+
     setPreviewCrop({
-      x: offsetX + cropX * scaleX,
-      y: offsetY + cropY * scaleY,
-      width: cropWidth * scaleX,
-      height: cropHeight * scaleY,
+      x: visibleX,
+      y: visibleY,
+      width: visibleWidth,
+      height: visibleHeight,
     });
   };
 
   useEffect(() => {
+    // Logic xử lý Retake hoặc New Session
     if (incomingRetakeIndex !== undefined && incomingCurrentPhotos) {
       setIsRetaking(true);
       setRetakeIndex(incomingRetakeIndex);
@@ -183,50 +212,67 @@ function Photo() {
       .catch((err) => console.error('Lỗi khi lấy cấu hình:', err));
   }, [id_admin]);
 
-  // Setup camera với độ phân giải cao
   useEffect(() => {
     let mounted = true;
 
     const setupCamera = async () => {
-      let stream = null;
-      const tryConstraints = [
-        { audio: false, video: { facingMode: 'user', width: { ideal: 3840 }, height: { ideal: 2160 }, frameRate: { ideal: 30 } } },
-        { audio: false, video: { facingMode: 'user', width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } } },
-        { audio: false, video: { facingMode: 'user' } },
-      ];
-
-      for (const constraints of tryConstraints) {
-        try {
-          stream = await navigator.mediaDevices.getUserMedia(constraints);
-          if (!mounted) return;
-          break;
-        } catch (err) {
-          console.warn('Thử độ phân giải thất bại:', constraints, err);
-        }
-      }
-
-      if (!stream) {
-        console.error('Không thể truy cập camera.');
-        return;
-      }
-
-      streamRef.current = stream;
-      const track = stream.getVideoTracks()[0];
-      if (track) {
-        const settings = track.getSettings();
-        console.log('✅ Camera resolution thực tế:', settings.width, 'x', settings.height);
-        if ('ImageCapture' in window) {
-          imageCaptureRef.current = new window.ImageCapture(track);
-        }
-      }
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        const handleLoaded = () => {
-          videoRef.current.play().catch(() => {});
-          updatePreviewCrop();
+      try {
+        // === [OPTIMIZED] YÊU CẦU ĐỘ PHÂN GIẢI CAO NHẤT (4K hoặc Full HD) ===
+        const constraints = {
+          audio: false,
+          video: {
+            facingMode: 'user',
+            width: { ideal: 3840 }, // Thử xin 4K
+            height: { ideal: 2160 },
+            frameRate: { ideal: 30 },
+          },
         };
-        videoRef.current.addEventListener('loadedmetadata', handleLoaded, { once: true });
+
+        let stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+        if (!mounted) return;
+        streamRef.current = stream;
+
+        try {
+          const track = stream.getVideoTracks()[0];
+          // Kiểm tra xem camera thực tế cấp độ phân giải bao nhiêu
+          const settings = track.getSettings();
+          console.log(`Camera Resolution: ${settings.width}x${settings.height}`);
+
+          if (track && 'ImageCapture' in window) {
+            imageCaptureRef.current = new window.ImageCapture(track);
+          } else {
+            imageCaptureRef.current = null;
+          }
+        } catch (e) {
+          imageCaptureRef.current = null;
+        }
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          const handleLoaded = () => {
+            videoRef.current.play().catch(() => {});
+            updatePreviewCrop();
+          };
+          videoRef.current.addEventListener('loadedmetadata', handleLoaded, { once: true });
+        }
+      } catch (err) {
+        console.error('Lỗi khi truy cập camera (High Res):', err);
+        // Fallback về cấu hình thường nếu 4K fail
+        try {
+          const fallback = await navigator.mediaDevices.getUserMedia({ 
+            video: { width: { ideal: 1920 }, height: { ideal: 1080 } } 
+          });
+          if (!mounted) return;
+          streamRef.current = fallback;
+          if (videoRef.current) {
+            videoRef.current.srcObject = fallback;
+            videoRef.current.play().catch(() => {});
+            videoRef.current.addEventListener('loadedmetadata', updatePreviewCrop, { once: true });
+          }
+        } catch (e2) {
+          console.error('Không thể truy cập camera (Fallback):', e2);
+        }
       }
     };
 
@@ -250,29 +296,9 @@ function Photo() {
     };
   }, [cut]);
 
-  // Đếm ngược và chụp ảnh
   useEffect(() => {
-    if (!isStarted || photoIndex > maxPhotos) return;
+    if (!isStarted) return;
 
-    const currentTime = photoIndex === 1 ? initialTime : subsequentTime;
-    setShootCountdown(currentTime);
-
-    const shootTimer = setTimeout(() => {
-      handleTakePhoto();
-    }, currentTime * 1000);
-
-    const interval = setInterval(() => {
-      setShootCountdown((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-
-    return () => {
-      clearTimeout(shootTimer);
-      clearInterval(interval);
-    };
-  }, [photoIndex, isStarted, maxPhotos, initialTime, subsequentTime]);
-
-  // ✅ HIỆU ỨNG CHUYỂN TRANG KHI CHỤP ĐỦ ẢNH
-  useEffect(() => {
     if (photoIndex > maxPhotos) {
       setTimeout(() => {
         if (isRetaking) {
@@ -280,19 +306,21 @@ function Photo() {
           const updatedPhotos = [...currentPhotosState];
           updatedPhotos[retakeIndex] = newPhoto;
           const updatedSlots = [...currentSelectedSlotsState];
+          // Cập nhật slot với ảnh mới, reset flip về false
           if (updatedSlots[retakeIndex]) {
             updatedSlots[retakeIndex] = { ...updatedSlots[retakeIndex], photo: newPhoto, flip: false };
           }
           const updatedFilters = { ...currentAppliedFiltersState };
-          updatedFilters[retakeIndex] = 'original';
+          // Reset filter về original cho ảnh vừa chụp lại
+          updatedFilters[retakeIndex] = 'original'; 
 
           navigate('/Selphoto', {
             state: {
               photos: updatedPhotos,
               size,
               cut,
-              selectedFrame,
-              selectedFrameId,
+              selectedFrame: selectedFrame,
+              selectedFrameId: selectedFrameId,
               price,
               selectedSlots: updatedSlots,
               appliedFilters: updatedFilters,
@@ -318,11 +346,31 @@ function Photo() {
           });
         }
       }, 1500);
+      return;
     }
-  }, [photoIndex, maxPhotos, isRetaking, photos, navigate]);
+
+    const currentTime = photoIndex === 1 ? initialTime : subsequentTime;
+    setCountdown(currentTime);
+    const timer = setTimeout(() => {
+      handleTakePhoto();
+    }, currentTime * 1000);
+
+    return () => clearTimeout(timer);
+  }, [photoIndex, isStarted, maxPhotos, initialTime, subsequentTime, photos, navigate, size, cut, selectedFrame, selectedFrameId, price, isRetaking, retakeIndex]);
+
+  useEffect(() => {
+    if (!isStarted) return;
+    if (photoIndex <= maxPhotos) {
+      const interval = setInterval(() => {
+        setCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [isStarted, photoIndex, maxPhotos]);
 
   const handleTakePhoto = async () => {
-    if (!streamRef.current || !videoRef.current || photoIndex > maxPhotos) return;
+    if (!streamRef.current || !videoRef.current) return;
+    if (photoIndex > maxPhotos) return;
 
     const video = videoRef.current;
     let videoWidth = video.videoWidth;
@@ -340,15 +388,19 @@ function Photo() {
       });
     }
 
+    // Lấy kích thước Crop dựa trên độ phân giải GỐC của Video
     const { cropWidth, cropHeight, cropX, cropY } = getCropDimensions(cut, videoWidth, videoHeight);
 
     const canvas = canvasRef.current;
+    // Đặt kích thước canvas bằng đúng kích thước Crop Gốc (Rất lớn)
     canvas.width = cropWidth;
     canvas.height = cropHeight;
     const ctx = canvas.getContext('2d');
 
+    // === [OPTIMIZED] TĂNG CHẤT LƯỢNG VẼ CANVAS ===
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
+
     ctx.clearRect(0, 0, cropWidth, cropHeight);
     ctx.save();
 
@@ -357,6 +409,7 @@ function Photo() {
       ctx.scale(-1, 1);
     }
 
+    // Ưu tiên dùng ImageCapture để chụp ảnh tĩnh độ nét cao
     if (imageCaptureRef.current) {
       try {
         const blob = await imageCaptureRef.current.takePhoto();
@@ -373,7 +426,7 @@ function Photo() {
 
         ctx.drawImage(
           img,
-          cropX * scaleX,
+          cropX * scaleX, // Scale crop coordinates to match photo resolution
           cropY * scaleY,
           cropWidth * scaleX,
           cropHeight * scaleY,
@@ -384,26 +437,32 @@ function Photo() {
         );
         ctx.restore();
 
-        canvas.toBlob((croppedBlob) => {
-          if (croppedBlob) {
-            blobToDataURL(croppedBlob).then(applyCapturedPhoto);
-          }
-        }, 'image/png');
+        // === [OPTIMIZED] XUẤT ẢNH JPEG CHẤT LƯỢNG 100% ===
+        canvas.toBlob(async (croppedBlob) => {
+          if (!croppedBlob) return;
+          const croppedDataUrl = await blobToDataURL(croppedBlob);
+          applyCapturedPhoto(croppedDataUrl);
+        }, 'image/jpeg', 1.0); // 1.0 = Max Quality
         return;
       } catch (err) {
-        console.warn('ImageCapture lỗi, dùng fallback:', err);
+        console.warn('ImageCapture lỗi, dùng fallback canvas:', err);
       }
     }
 
-    // Fallback
+    // Fallback: Chụp trực tiếp từ thẻ Video (Vẫn nét nếu stream 4K)
     ctx.drawImage(video, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
     ctx.restore();
 
-    canvas.toBlob((blob) => {
-      if (blob) {
-        blobToDataURL(blob).then(applyCapturedPhoto);
+    // === [OPTIMIZED] XUẤT ẢNH JPEG CHẤT LƯỢNG 100% ===
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      try {
+        const dataUrl = await blobToDataURL(blob);
+        applyCapturedPhoto(dataUrl);
+      } catch (e) {
+        console.error('Lỗi chuyển blob->dataURL:', e);
       }
-    }, 'image/png');
+    }, 'image/jpeg', 1.0); // 1.0 = Max Quality
   };
 
   const applyCapturedPhoto = (dataUrl) => {
@@ -413,8 +472,11 @@ function Photo() {
     setTimeout(() => setFlash(false), 200);
 
     setTimeout(() => {
-      if (photosContainerRef.current?.lastElementChild) {
-        photosContainerRef.current.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      if (photosContainerRef.current && photosContainerRef.current.lastElementChild) {
+        photosContainerRef.current.lastElementChild.scrollIntoView({
+          behavior: 'smooth',
+          block: 'end'
+        });
       }
     }, 50);
   };
@@ -424,7 +486,8 @@ function Photo() {
   };
 
   const getCurrentPhotoDisplay = () => {
-    return photoIndex <= maxPhotos ? `${photoIndex}/${maxPhotos}` : 'Hoàn thành!';
+    if (photoIndex <= maxPhotos) return `${photoIndex}/${maxPhotos}`;
+    return 'Hoàn thành!';
   };
 
   return (
@@ -436,12 +499,13 @@ function Photo() {
         muted
         autoPlay
       />
-      
-      {/* Countdown tổng (góc trên) */}
-      <div className="countdown">⌛: {formattedCountdown}</div>
+      <div className="countdown">
+        ⌛: {formattedCountdown}
+      </div>
 
       <canvas ref={canvasRef} className="d-none" />
 
+      {/* Hiển thị vùng đen che mờ (Mask) để user biết vùng nào sẽ được lấy */}
       {previewCrop && (
         <div className="crop-mask-overlay">
           <div className="mask-bar" style={{ top: 0, left: 0, right: 0, height: `${previewCrop.y}px` }} />
@@ -456,7 +520,7 @@ function Photo() {
               top: `${previewCrop.y}px`,
               width: `${previewCrop.width}px`,
               height: `${previewCrop.height}px`,
-              boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)'
+              boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)' // Làm tối vùng ngoài
             }}
           />
         </div>
@@ -464,18 +528,18 @@ function Photo() {
 
       {flash && <div className="flash-overlay-fullscreen" />}
 
-      {!isStarted && (
+      {!isStarted ? (
         <div className="camera-icon-overlay">
           <div className="camera-icon">
             <i className="fas fa-camera" />
             <p>Nhấn vào màn hình để bắt đầu chụp</p>
           </div>
         </div>
-      )}
+      ) : null}
 
       {isStarted && photoIndex <= maxPhotos && (
         <div className="countdown-center">
-          <div className="countdown-number-large">{shootCountdown}</div>
+          <div className="countdown-number-large">{countdown2}</div>
         </div>
       )}
 

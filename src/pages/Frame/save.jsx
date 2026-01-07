@@ -119,8 +119,8 @@ function Frame() {
     });
   };
 
-  // ===========================================================================
-  // 1. THUẬT TOÁN TÌM VÙNG TRONG SUỐT (GIỮ NGUYÊN)
+// ===========================================================================
+  // 1. THUẬT TOÁN TÌM VÙNG TRONG SUỐT (FINAL STANDARD)
   // ===========================================================================
   const detectTransparentSlots = (frameImg, width, height) => {
     const canvas = document.createElement('canvas');
@@ -136,23 +136,32 @@ function Frame() {
     const slots = [];
 
     const getIdx = (x, y) => (y * width + x) * 4;
+    const step = 2; // Quét chi tiết
 
-    for (let y = 0; y < height; y += 4) {
-      for (let x = 0; x < width; x += 4) {
+    for (let y = 0; y < height; y += step) {
+      for (let x = 0; x < width; x += step) {
+        if (visited[y * width + x]) continue;
+        
         const idx = getIdx(x, y);
         const alpha = data[idx + 3];
 
-        if (alpha < 50 && visited[y * width + x] === 0) {
+        if (alpha < 50) {
+          let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0, sumYY = 0;
+          let count = 0;
           let minX = width, maxX = 0, minY = height, maxY = 0;
+          
           const queue = [{x, y}];
           visited[y * width + x] = 1;
-          let pixelCount = 0;
 
           while (queue.length > 0) {
             const p = queue.pop();
-            const px = p.x;
+            const px = p.x; 
             const py = p.y;
-            pixelCount++;
+            
+            sumX += px; sumY += py;
+            sumXX += px * px; sumYY += py * py;
+            sumXY += px * py;
+            count++;
 
             if (px < minX) minX = px;
             if (px > maxX) maxX = px;
@@ -160,16 +169,16 @@ function Frame() {
             if (py > maxY) maxY = py;
 
             const neighbors = [
-              {nx: px + 4, ny: py}, {nx: px - 4, ny: py},
-              {nx: px, ny: py + 4}, {nx: px, ny: py - 4}
+              {nx: px + step, ny: py}, {nx: px - step, ny: py},
+              {nx: px, ny: py + step}, {nx: px, ny: py - step}
             ];
 
             for (let n of neighbors) {
               if (n.nx >= 0 && n.nx < width && n.ny >= 0 && n.ny < height) {
                 const nIdx = n.ny * width + n.nx;
-                if (visited[nIdx] === 0) {
-                  const currentAlpha = data[getIdx(n.nx, n.ny) + 3];
-                  if (currentAlpha < 50) {
+                if (!visited[nIdx]) {
+                  const a = data[getIdx(n.nx, n.ny) + 3];
+                  if (a < 50) {
                      visited[nIdx] = 1;
                      queue.push({x: n.nx, y: n.ny});
                   }
@@ -178,13 +187,43 @@ function Frame() {
             }
           }
 
-          if (pixelCount > 100 && (maxX - minX) > 50 && (maxY - minY) > 50) {
+          if (count > 100 && (maxX - minX) > 20) {
+             const meanX = sumX / count;
+             const meanY = sumY / count;
+             const varX = (sumXX / count) - (meanX * meanX);
+             const varY = (sumYY / count) - (meanY * meanY);
+             const covXY = (sumXY / count) - (meanX * meanY);
+
+             const delta = varX - varY;
+             const rotationRad = 0.5 * Math.atan2(2 * covXY, delta);
+             
+             const discrimination = Math.sqrt(delta * delta + 4 * covXY * covXY);
+             const lambda1 = 0.5 * (varX + varY + discrimination); // Trục lớn
+             const lambda2 = 0.5 * (varX + varY - discrimination); // Trục nhỏ
+             const pcaWidth = Math.sqrt(Math.abs(lambda1) * 12); 
+             const pcaHeight = Math.sqrt(Math.abs(lambda2) * 12);
+
+             // --- LOGIC GÓC NGHIÊNG ---
+             const degree = rotationRad * (180 / Math.PI);
+             const absDeg = Math.abs(degree);
+             // Ngưỡng 10 độ: Dưới 10 độ coi như thẳng
+             const isStraight = absDeg < 10 || Math.abs(absDeg - 90) < 10 || Math.abs(absDeg - 180) < 10;
+
              slots.push({
-               x: minX, y: minY,
-               width: maxX - minX,
-               height: maxY - minY,
-               centerX: (minX + maxX) / 2,
-               centerY: (minY + maxY) / 2
+               // Thông số dùng để xoay
+               centerX: meanX,
+               centerY: meanY,
+               rotation: isStraight ? 0 : rotationRad, 
+               realWidth: pcaWidth,
+               realHeight: pcaHeight,
+               
+               // Thông số dùng để vẽ thẳng (AABB)
+               aabbX: minX, 
+               aabbY: minY,
+               aabbWidth: maxX - minX,
+               aabbHeight: maxY - minY,
+               
+               isStraight: isStraight
              });
           }
         }
@@ -193,16 +232,15 @@ function Frame() {
 
     slots.sort((a, b) => {
       const yDiff = Math.abs(a.centerY - b.centerY);
-      if (yDiff > 100) return a.centerY - b.centerY;
+      if (yDiff > 50) return a.centerY - b.centerY;
       return a.centerX - b.centerX;
     });
 
     return slots;
   };
-
-  // ===========================================================================
 // ===========================================================================
-  // 2. HÀM VẼ THÔNG MINH (ĐÃ SỬA: MỞ RỘNG VÙNG CẮT 1%)
+// ===========================================================================
+  // 2. HÀM VẼ (FIX GAP: SCALE ẢNH LỚN HƠN VÙNG CHỌN)
   // ===========================================================================
   const drawCompositeHighRes = async (canvasWidth, canvasHeight, frameObj) => {
     const canvas = document.createElement('canvas');
@@ -210,129 +248,123 @@ function Frame() {
     canvas.height = canvasHeight;
     const ctx = canvas.getContext('2d');
 
-    // Load Frame
     const frameImg = await loadImage(frameObj.frame);
-
-    // TÌM CÁC VÙNG TRONG SUỐT (Detection giữ nguyên)
     let slotsToDraw = detectTransparentSlots(frameImg, canvasWidth, canvasHeight);
+    
+    // Kiểm tra null an toàn
+    const safeSelectedSlots = selectedSlots || [];
+    const userImages = await Promise.all(safeSelectedSlots.map(s => s && s.photo ? loadImage(s.photo) : null));
 
-    // Fallback nếu không tìm thấy lỗ
-    if (slotsToDraw.length === 0) {
-       console.warn("Không tìm thấy vùng trong suốt, dùng fallback.");
-       // ... (Logic fallback nếu cần)
-    }
-
-    // Load tất cả ảnh User
-    const userImages = await Promise.all(selectedSlots.map(s => s && s.photo ? loadImage(s.photo) : null));
-
-    // --- BƯỚC 1: VẼ ẢNH USER VÀO CÁC Ô (LAYER DƯỚI) ---
+    // --- BƯỚC 1: VẼ ẢNH USER ---
     slotsToDraw.forEach((slotInfo, idx) => {
-        if (idx >= selectedSlots.length || !userImages[idx]) return;
+        if (idx >= safeSelectedSlots.length || !userImages[idx]) return;
         
         const userImg = userImages[idx];
-        const userSlotData = selectedSlots[idx];
+        const userSlotData = safeSelectedSlots[idx];
 
-        // === [FIX LOGIC] MỞ RỘNG VÙNG CẮT RA 2% ===
-        // Thay vì chỉ scale ảnh, ta định nghĩa lại "Vùng Đích" (Target Area) to hơn slot gốc
-        const expandRatio = 0.02; // 2% cho chắc chắn (bạn có thể chỉnh về 0.02)
-        const expandW = slotInfo.width * expandRatio;
-        const expandH = slotInfo.height * expandRatio;
+        // --- CHIẾN THUẬT LẤP ĐẦY KHOẢNG TRẮNG ---
+        let baseW, baseH;
 
-        // Tọa độ và kích thước mới (Lùi x, y lại và tăng width, height lên)
-        const targetX = slotInfo.x - expandW;
-        const targetY = slotInfo.y - expandH;
-        const targetW = slotInfo.width + (expandW * 2);
-        const targetH = slotInfo.height + (expandH * 2);
+        if (slotInfo.isStraight) {
+            // Nếu là hình thẳng (hoặc đám mây/tim được ép thẳng):
+            // Dùng kích thước hộp bao (AABB) để đảm bảo phủ kín từ trái sang phải
+            baseW = slotInfo.aabbWidth;
+            baseH = slotInfo.aabbHeight;
+        } else {
+            // Nếu là hình nghiêng:
+            // Dùng kích thước PCA, nhưng lấy MAX giữa PCA và AABB*0.8 để tránh trường hợp PCA tính quá nhỏ
+            baseW = Math.max(slotInfo.realWidth, slotInfo.aabbWidth * 0.8);
+            baseH = Math.max(slotInfo.realHeight, slotInfo.aabbHeight * 0.8);
+        }
 
-        // Tính toán tỷ lệ dựa trên VÙNG ĐÍCH MỚI (đã mở rộng)
+        // QUAN TRỌNG: Mở rộng vùng vẽ thêm 20% (0.2)
+        // Việc này đảm bảo ảnh luôn to hơn cái lỗ, bất kể xoay hay méo.
+        // Phần thừa sẽ bị cắt bởi lệnh ctx.clip()
+        const expandRatio = 0.2; 
+        const targetW = baseW * (1 + expandRatio);
+        const targetH = baseH * (1 + expandRatio);
+        
+        // Tính tỷ lệ COVER
         const targetRatio = targetW / targetH;
         const imgRatio = userImg.width / userImg.height;
         
-        let drawW, drawH, drawX, drawY;
-
-        // Logic Object-fit: COVER (Lấp đầy vùng đích mới)
+        let drawW, drawH;
         if (imgRatio > targetRatio) { 
-          // Ảnh dài hơn vùng đích -> Lấy theo chiều cao vùng đích
           drawH = targetH;
           drawW = targetH * imgRatio;
-          // Căn giữa theo chiều ngang
-          drawX = targetX - (drawW - targetW) / 2;
-          drawY = targetY;
         } else {
-          // Ảnh cao hơn vùng đích -> Lấy theo chiều rộng vùng đích
           drawW = targetW;
           drawH = targetW / imgRatio;
-          // Căn giữa theo chiều dọc
-          drawX = targetX;
-          drawY = targetY - (drawH - targetH) / 2;
         }
 
         ctx.save();
         
-        // === CẮT (CLIP) THEO VÙNG MỞ RỘNG ===
-        // Ta cho phép vẽ tràn ra ngoài slot gốc 1%, 
-        // để đảm bảo frame đè lên sẽ không thấy kẽ hở.
-        // Tuy nhiên vẫn phải clip theo targetW/H để ảnh này không lấn sang ảnh bên cạnh quá nhiều.
+        // 1. Dời bút về tâm hình
+        // Nếu thẳng thì dùng tâm hộp bao, nếu nghiêng dùng tâm PCA
+        const cx = slotInfo.isStraight ? (slotInfo.aabbX + slotInfo.aabbWidth/2) : slotInfo.centerX;
+        const cy = slotInfo.isStraight ? (slotInfo.aabbY + slotInfo.aabbHeight/2) : slotInfo.centerY;
+        
+        ctx.translate(cx, cy);
+        ctx.rotate(slotInfo.rotation);
+
+        // 2. Tạo đường cắt (Clip)
         ctx.beginPath();
-        ctx.rect(targetX, targetY, targetW, targetH);
+        // Vẽ vùng cắt lớn hơn một chút để đảm bảo
+        ctx.rect(-targetW / 2, -targetH / 2, targetW, targetH);
         ctx.clip();
 
+        // 3. Vẽ ảnh
+        const drawX = -drawW / 2; 
+        const drawY = -drawH / 2;
+
         if (userSlotData.flip) {
-            // Flip thì translate về tâm của vùng vẽ mới
-            ctx.translate(drawX + drawW/2, drawY + drawH/2);
             ctx.scale(-1, 1);
-            ctx.drawImage(userImg, -drawW/2, -drawH/2, drawW, drawH);
-        } else {
-            ctx.drawImage(userImg, drawX, drawY, drawW, drawH);
         }
+        
+        ctx.drawImage(userImg, drawX, drawY, drawW, drawH);
         
         ctx.restore();
     });
     
-    // --- BƯỚC 2: VẼ STICKER (LAYER GIỮA) ---
+    // --- BƯỚC 2: VẼ STICKER (Dùng tọa độ AABB cho an toàn) ---
     for (let idx = 0; idx < slotsToDraw.length; idx++) {
-        if (idx >= selectedSlots.length) continue;
+        if (idx >= safeSelectedSlots.length) continue;
         const slotInfo = slotsToDraw[idx];
         const stickers = imageStickers ? imageStickers[idx] : [];
         
         if (stickers && stickers.length > 0) {
             ctx.save();
-            // Sticker vẫn nên nằm gọn trong slot gốc để tránh bị frame che mất các chi tiết quan trọng
-            // Hoặc bạn có thể dùng targetX/Y nếu muốn sticker cũng tràn viền. 
-            // Ở đây tôi giữ slot gốc cho an toàn.
             ctx.beginPath();
-            ctx.rect(slotInfo.x, slotInfo.y, slotInfo.width, slotInfo.height);
+            ctx.rect(slotInfo.aabbX, slotInfo.aabbY, slotInfo.aabbWidth, slotInfo.aabbHeight);
             ctx.clip();
 
             for (const sticker of stickers) {
                 if (sticker.x >= 5 && sticker.x <= 95 && sticker.y >= 5 && sticker.y <= 95) {
                     try {
                         const sImg = await loadImage(sticker.src);
-                        const sX = slotInfo.x + (sticker.x / 100) * slotInfo.width;
-                        const sY = slotInfo.y + (sticker.y / 100) * slotInfo.height;
+                        const sX = slotInfo.aabbX + (sticker.x / 100) * slotInfo.aabbWidth;
+                        const sY = slotInfo.aabbY + (sticker.y / 100) * slotInfo.aabbHeight;
 
                         ctx.translate(sX, sY);
                         ctx.rotate((sticker.rotation * Math.PI) / 180);
                         
-                        const baseSize = slotInfo.height * 0.25;
+                        const baseSize = Math.min(slotInfo.aabbWidth, slotInfo.aabbHeight) * 0.25; 
                         const finalSize = baseSize * sticker.scale; 
 
                         ctx.drawImage(sImg, -finalSize/2, -finalSize/2, finalSize, finalSize);
                         ctx.translate(-sX, -sY);
-                    } catch (e) { console.error("Lỗi vẽ sticker", e); }
+                    } catch (e) { }
                 }
             }
             ctx.restore();
         }
     }
 
-    // --- BƯỚC 3: VẼ KHUNG ĐÈ LÊN TRÊN CÙNG (LAYER TRÊN) ---
-    // Frame sẽ che đi phần rìa 1.5% mà ta vừa vẽ tràn ra.
+    // --- BƯỚC 3: VẼ KHUNG ---
     ctx.drawImage(frameImg, 0, 0, canvasWidth, canvasHeight);
 
     return canvas;
   };
-
   // ===========================================================================
   // 3. GENERATE VÀ RENDER (GIỮ NGUYÊN LOGIC GỌI HÀM)
   // ===========================================================================

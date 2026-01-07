@@ -1261,7 +1261,7 @@ const handleContinue = () => {
                   maxHeight: slotHeight, 
                   width: 'auto',
                   height: 'auto',
-                  objectFit: 'contain',
+                  objectFit: 'cover',
                   transform: slot.flip ? 'scaleX(-1)' : 'none',
                   filter: currentFilter,
                   borderRadius: '8px',

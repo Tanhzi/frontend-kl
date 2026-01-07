@@ -20,7 +20,7 @@ const AiTopic = () => {
 
   // Bộ lọc & Tìm kiếm
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterTopic, setFilterTopic] = useState('');
+  const [filterType, setFilterType] = useState('');
   const [uniqueTopics, setUniqueTopics] = useState([]);
 
   // Danh sách sự kiện (dùng cho dropdown)
@@ -71,7 +71,7 @@ const AiTopic = () => {
         const topics = data.data || [];
         setAllTopics(topics);
 
-        const uTopics = [...new Set(topics.map(t => t.topic).filter(Boolean))].sort();
+        const uTopics = [...new Set(topics.map(t => t.type).filter(Boolean))].sort();
         setUniqueTopics(uTopics);
       }
     } catch (err) {
@@ -107,14 +107,21 @@ const AiTopic = () => {
 
     if (searchTerm) {
       const lowerSearch = searchTerm.toLowerCase();
-      result = result.filter(t => 
-        (t.name && t.name.toLowerCase().includes(lowerSearch)) ||
-        (t.topic && t.topic.toLowerCase().includes(lowerSearch))
-      );
+
+      result = result.filter(t => {
+        const eventName = getEventNameById(t.id_topic).toLowerCase();
+
+        return (
+          (t.name && t.name.toLowerCase().includes(lowerSearch)) ||
+          (t.topic && t.topic.toLowerCase().includes(lowerSearch)) ||
+          (eventName && eventName.includes(lowerSearch))
+        );
+      });
     }
 
-    if (filterTopic && filterTopic !== 'all') {
-      result = result.filter(t => t.topic === filterTopic);
+
+    if (filterType && filterType !== 'all') {
+      result = result.filter(t => t.type === filterType);
     }
 
     setTotalItems(result.length);
@@ -126,7 +133,7 @@ const AiTopic = () => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const paginatedData = result.slice(startIndex, startIndex + itemsPerPage);
     setDisplayedTopics(paginatedData);
-  }, [allTopics, searchTerm, filterTopic, currentPage]);
+  }, [allTopics, searchTerm, filterType, currentPage]);
 
   // 4. TẠO ẢNH TỪ PROMPT
   const handleGenerateImage = async () => {
@@ -134,7 +141,7 @@ const AiTopic = () => {
     
     setFormData(prev => ({ ...prev, isGenerating: true }));
     try {
-      const res = await fetch(`${AI_URL}/admin-generate-image`, {
+      const res = await fetch(`http://localhost:5000/admin-generate-image`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: formData.prompt })
@@ -313,9 +320,9 @@ const AiTopic = () => {
                   <i className="bi bi-funnel"></i>
                 </button>
                 <div className="aitopic-filter-menu">
-                  <button className={!filterTopic ? 'active' : ''} onClick={() => setFilterTopic('')}>Tất cả</button>
+                  <button className={!filterType ? 'active' : ''} onClick={() => setFilterType('')}>Tất cả</button>
                   {uniqueTopics.map(n => (
-                    <button key={n} className={filterTopic === n ? 'active' : ''} onClick={() => setFilterTopic(n)}>{n}</button>
+                    <button key={n} className={filterType === n ? 'active' : ''} onClick={() => setFilterType(n)}>{n}</button>
                   ))}
                 </div>
               </div>

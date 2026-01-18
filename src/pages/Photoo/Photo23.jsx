@@ -13,12 +13,9 @@ function Photo() {
   const [auth, setAuth] = useState(getAuth());
   const { id_admin } = auth || {};
 
-  // State
-  const [shootCountdown, setShootCountdown] = useState(0);
+  const [shootCountdown, setShootCountdown] = useState(0); // đếm ngược trước mỗi lần chụp
   const [photoIndex, setPhotoIndex] = useState(1);
-  const [photos, setPhotos] = useState([]); 
-  const [processingStatus, setProcessingStatus] = useState({}); 
-  
+  const [photos, setPhotos] = useState([]);
   const [flash, setFlash] = useState(false);
   const [isMirror, setIsMirror] = useState(false);
   
@@ -27,14 +24,13 @@ function Photo() {
   const [isStarted, setIsStarted] = useState(false);
   const [maxPhotos, setMaxPhotos] = useState(8);
   const [isRetaking, setIsRetaking] = useState(false);
-  const [retakeIndexState, setRetakeIndexState] = useState(null);
+  const [retakeIndex, setRetakeIndex] = useState(null);
   
   const [currentPhotosState, setCurrentPhotosState] = useState([]);
   const [currentSelectedSlotsState, setCurrentSelectedSlotsState] = useState([]);
   const [currentAppliedFiltersState, setCurrentAppliedFiltersState] = useState({});
   const [previewCrop, setPreviewCrop] = useState(null);
 
-  // Refs
   const photosContainerRef = useRef(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -43,11 +39,6 @@ function Photo() {
 
   const navigate = useNavigate();
   const location = useLocation();
-  
-  // API Config
-  const API_URL = import.meta.env.VITE_API_BASE_URL;
-  const AI_URL = import.meta.env.VITE_AI_API_URL || 'http://localhost:5000';
-
   const {
     size,
     cut,
@@ -61,8 +52,6 @@ function Photo() {
     currentSelectedSlots: incomingCurrentSelectedSlots,
     currentAppliedFilters: incomingCurrentAppliedFilters
   } = location.state || {};
-
-  // --- HELPER FUNCTIONS (Lấy từ code cũ) ---
 
   const blobToDataURL = (blob) =>
     new Promise((resolve, reject) => {
@@ -79,6 +68,14 @@ function Photo() {
     if (cutNum === 6) return 6;
     return 8;
   };
+
+  const { formattedCountdown, countdown } = useCountdown();
+
+  useEffect(() => {
+    if (countdown === 0) {
+      navigate('/Appclien');
+    }
+  }, [countdown, navigate]);
 
   const getCropDimensions = (cutValue, videoWidth, videoHeight) => {
     const cutNum = Number(cutValue);
@@ -148,13 +145,10 @@ function Photo() {
     });
   };
 
-  // --- EFFECTS ---
-
-  // 1. Xử lý logic Retake hoặc chụp mới
   useEffect(() => {
     if (incomingRetakeIndex !== undefined && incomingCurrentPhotos) {
       setIsRetaking(true);
-      setRetakeIndexState(incomingRetakeIndex);
+      setRetakeIndex(incomingRetakeIndex);
       setCurrentPhotosState(incomingCurrentPhotos);
       setCurrentSelectedSlotsState(incomingCurrentSelectedSlots || []);
       setCurrentAppliedFiltersState(incomingCurrentAppliedFilters || {});
@@ -162,10 +156,9 @@ function Photo() {
       setPhotoIndex(1);
       setMaxPhotos(1);
       setIsStarted(true);
-      setProcessingStatus({});
     } else {
       setIsRetaking(false);
-      setRetakeIndexState(null);
+      setRetakeIndex(null);
       setCurrentPhotosState([]);
       setCurrentSelectedSlotsState([]);
       setCurrentAppliedFiltersState({});
@@ -174,14 +167,12 @@ function Photo() {
       setPhotos([]);
       setPhotoIndex(1);
       setIsStarted(false);
-      setProcessingStatus({});
     }
   }, [incomingRetakeIndex, incomingCurrentPhotos, cut]);
 
-  // 2. Lấy cấu hình Camera từ API
   useEffect(() => {
     if (!id_admin) return;
-    fetch(`${API_URL}/camera/basic?id_admin=${id_admin}`)
+    fetch(`${import.meta.env.VITE_API_BASE_URL}/camera/basic?id_admin=${id_admin}`)
       .then((res) => res.json())
       .then((data) => {
         if (!data) return;
@@ -190,17 +181,9 @@ function Photo() {
         setIsMirror(Number(data.mirror) === 1);
       })
       .catch((err) => console.error('Lỗi khi lấy cấu hình:', err));
-  }, [id_admin, API_URL]);
+  }, [id_admin]);
 
-  // 3. Setup Camera (Lấy đầy đủ từ code cũ)
-  const { formattedCountdown, countdown } = useCountdown();
-  
-  useEffect(() => {
-    if (countdown === 0) {
-      navigate('/Appclien');
-    }
-  }, [countdown, navigate]);
-
+  // Setup camera với độ phân giải cao
   useEffect(() => {
     let mounted = true;
 
@@ -230,6 +213,8 @@ function Photo() {
       streamRef.current = stream;
       const track = stream.getVideoTracks()[0];
       if (track) {
+        const settings = track.getSettings();
+        console.log('✅ Camera resolution thực tế:', settings.width, 'x', settings.height);
         if ('ImageCapture' in window) {
           imageCaptureRef.current = new window.ImageCapture(track);
         }
@@ -265,7 +250,7 @@ function Photo() {
     };
   }, [cut]);
 
-  // 4. Logic đếm ngược chụp
+  // Đếm ngược và chụp ảnh
   useEffect(() => {
     if (!isStarted || photoIndex > maxPhotos) return;
 
@@ -286,45 +271,56 @@ function Photo() {
     };
   }, [photoIndex, isStarted, maxPhotos, initialTime, subsequentTime]);
 
-
-  // === CHỨC NĂNG MỚI: LÀM NÉT ẢNH NGẦM ===
-  const enhancePhotoInBackground = async (blob, index) => {
-    try {
-      // Đánh dấu ảnh này đang xử lý
-      setProcessingStatus(prev => ({ ...prev, [index]: 'processing' }));
-      
-      const formData = new FormData();
-      formData.append('image', blob, `capture_${index}.jpg`);
-
-      // Gọi API làm nét
-      const res = await fetch(`${AI_URL}/fast-enhance`, {
-        method: 'POST',
-        body: formData
-      });
-      const data = await res.json();
-      
-      if (data.success && data.enhanced_image) {
-        // Cập nhật lại ảnh trong mảng photos tại vị trí index
-        setPhotos(prevPhotos => {
-          const newPhotos = [...prevPhotos];
-          if (newPhotos[index]) {
-            newPhotos[index] = data.enhanced_image;
+  // ✅ HIỆU ỨNG CHUYỂN TRANG KHI CHỤP ĐỦ ẢNH
+  useEffect(() => {
+    if (photoIndex > maxPhotos) {
+      setTimeout(() => {
+        if (isRetaking) {
+          const newPhoto = photos[0];
+          const updatedPhotos = [...currentPhotosState];
+          updatedPhotos[retakeIndex] = newPhoto;
+          const updatedSlots = [...currentSelectedSlotsState];
+          if (updatedSlots[retakeIndex]) {
+            updatedSlots[retakeIndex] = { ...updatedSlots[retakeIndex], photo: newPhoto, flip: false };
           }
-          return newPhotos;
-        });
-        console.log(`✅ Ảnh ${index + 1} đã làm nét xong.`);
-      } else {
-        console.error(`Lỗi làm nét ảnh ${index + 1}:`, data.error);
-      }
-    } catch (error) {
-      console.error(`Lỗi kết nối khi làm nét ảnh ${index + 1}:`, error);
-    } finally {
-      // Đánh dấu đã xong (để cho phép chuyển trang)
-      setProcessingStatus(prev => ({ ...prev, [index]: 'done' }));
-    }
-  };
+          const updatedFilters = { ...currentAppliedFiltersState };
+          updatedFilters[retakeIndex] = 'original';
 
-  // === XỬ LÝ CHỤP ẢNH (Ghép logic cũ + mới) ===
+          navigate('/Selphoto', {
+            state: {
+              photos: updatedPhotos,
+              size,
+              cut,
+              selectedFrame,
+              selectedFrameId,
+              price,
+              selectedSlots: updatedSlots,
+              appliedFilters: updatedFilters,
+            },
+          });
+        } else {
+          const initialSlots = photos.map((photo, i) => ({ photo, flip: false }));
+          const initialFilters = {};
+          photos.forEach((_, i) => {
+            initialFilters[i] = 'original';
+          });
+          navigate('/Selphoto', {
+            state: {
+              photos,
+              size,
+              cut,
+              selectedFrame,
+              selectedFrameId,
+              price,
+              selectedSlots: initialSlots,
+              appliedFilters: initialFilters,
+            },
+          });
+        }
+      }, 1500);
+    }
+  }, [photoIndex, maxPhotos, isRetaking, photos, navigate]);
+
   const handleTakePhoto = async () => {
     if (!streamRef.current || !videoRef.current || photoIndex > maxPhotos) return;
 
@@ -351,44 +347,16 @@ function Photo() {
     canvas.height = cropHeight;
     const ctx = canvas.getContext('2d');
 
-    // Cấu hình vẽ canvas
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     ctx.clearRect(0, 0, cropWidth, cropHeight);
     ctx.save();
 
-    // Xử lý Mirror
     if (isMirror) {
       ctx.translate(cropWidth, 0);
       ctx.scale(-1, 1);
     }
 
-    // Hàm chung để xử lý blob sau khi chụp
-    const processBlob = (blob) => {
-      if (!blob) return;
-      blobToDataURL(blob).then((dataUrl) => {
-        const currentIndex = photos.length; // Index hiện tại
-        
-        // 1. Hiển thị ảnh ngay lập tức (ảnh gốc)
-        setPhotos((prev) => [...prev, dataUrl]);
-        
-        // 2. Gửi đi làm nét NGAY LẬP TỨC
-        enhancePhotoInBackground(blob, currentIndex);
-
-        // 3. Tăng index, flash, cuộn
-        setPhotoIndex((prev) => prev + 1);
-        setFlash(true);
-        setTimeout(() => setFlash(false), 200);
-
-        setTimeout(() => {
-          if (photosContainerRef.current?.lastElementChild) {
-            photosContainerRef.current.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'end' });
-          }
-        }, 50);
-      });
-    };
-
-    // Logic chụp: Ưu tiên ImageCapture, Fallback dùng video drawImage
     if (imageCaptureRef.current) {
       try {
         const blob = await imageCaptureRef.current.takePhoto();
@@ -416,95 +384,47 @@ function Photo() {
         );
         ctx.restore();
 
-        // Xuất ra blob JPEG 0.95
-        canvas.toBlob(processBlob, 'image/jpeg', 0.95);
+        canvas.toBlob((croppedBlob) => {
+          if (croppedBlob) {
+            blobToDataURL(croppedBlob).then(applyCapturedPhoto);
+          }
+        }, 'image/png');
         return;
       } catch (err) {
         console.warn('ImageCapture lỗi, dùng fallback:', err);
       }
     }
 
-    // Fallback: Chụp trực tiếp từ video element
+    // Fallback
     ctx.drawImage(video, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
     ctx.restore();
-    canvas.toBlob(processBlob, 'image/jpeg', 0.95);
+
+    canvas.toBlob((blob) => {
+      if (blob) {
+        blobToDataURL(blob).then(applyCapturedPhoto);
+      }
+    }, 'image/png');
   };
 
-  // === KIỂM TRA ĐIỀU KIỆN CHUYỂN TRANG ===
-  useEffect(() => {
-    // Chỉ chạy khi đã chụp đủ số ảnh
-    if (photoIndex > maxPhotos) {
-      
-      // Kiểm tra xem có ảnh nào đang xử lý ('processing') không?
-      const isStillProcessing = Object.values(processingStatus).some(status => status === 'processing');
-      
-      // Kiểm tra xem đã xử lý đủ số lượng ảnh chưa (số key 'done' + 'processing' == maxPhotos)
-      const processedCount = Object.keys(processingStatus).length;
-      const hasStartedAll = processedCount === maxPhotos;
+  const applyCapturedPhoto = (dataUrl) => {
+    setPhotos((prev) => [...prev, dataUrl]);
+    setPhotoIndex((prev) => prev + 1);
+    setFlash(true);
+    setTimeout(() => setFlash(false), 200);
 
-      if (!isStillProcessing && hasStartedAll) {
-        // Đã xong hết, chuyển trang
-        setTimeout(() => {
-          if (isRetaking) {
-            const newPhoto = photos[0];
-            const updatedPhotos = [...currentPhotosState];
-            updatedPhotos[retakeIndexState] = newPhoto;
-            const updatedSlots = [...currentSelectedSlotsState];
-            if (updatedSlots[retakeIndexState]) {
-                updatedSlots[retakeIndexState] = { ...updatedSlots[retakeIndexState], photo: newPhoto, flip: false };
-            }
-            const updatedFilters = { ...currentAppliedFiltersState };
-            updatedFilters[retakeIndexState] = 'original';
-
-            navigate('/Selphoto', {
-              state: {
-                photos: updatedPhotos,
-                size,
-                cut,
-                selectedFrame,
-                selectedFrameId,
-                price,
-                selectedSlots: updatedSlots,
-                appliedFilters: updatedFilters,
-              },
-            });
-          } else {
-            const initialSlots = photos.map((photo) => ({ photo, flip: false }));
-            const initialFilters = {};
-            photos.forEach((_, i) => {
-              initialFilters[i] = 'original';
-            });
-            navigate('/Selphoto', {
-              state: {
-                photos, // Mảng ảnh ĐÃ LÀM NÉT
-                size,
-                cut,
-                selectedFrame,
-                selectedFrameId,
-                price,
-                selectedSlots: initialSlots,
-                appliedFilters: initialFilters,
-              },
-            });
-          }
-        }, 1000);
+    setTimeout(() => {
+      if (photosContainerRef.current?.lastElementChild) {
+        photosContainerRef.current.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'end' });
       }
-    }
-  }, [photoIndex, maxPhotos, processingStatus, photos, isRetaking, navigate, currentPhotosState, currentSelectedSlotsState, currentAppliedFiltersState, retakeIndexState, size, cut, selectedFrame, selectedFrameId, price]);
+    }, 50);
+  };
 
   const handleScreenClick = () => {
     if (!isStarted) setIsStarted(true);
   };
 
-  // UI Helper
-  const isAllDone = photoIndex > maxPhotos;
-  const pendingCount = Object.values(processingStatus).filter(s => s === 'processing').length;
-
   const getCurrentPhotoDisplay = () => {
-    if (isAllDone) {
-      return pendingCount > 0 ? `Đang xử lý ${pendingCount} ảnh...` : 'Hoàn thành!';
-    }
-    return `${photoIndex}/${maxPhotos}`;
+    return photoIndex <= maxPhotos ? `${photoIndex}/${maxPhotos}` : 'Hoàn thành!';
   };
 
   return (
@@ -517,6 +437,7 @@ function Photo() {
         autoPlay
       />
       
+      {/* Countdown tổng (góc trên) */}
       <div className="countdown">⌛: {formattedCountdown}</div>
 
       <canvas ref={canvasRef} className="d-none" />
@@ -558,33 +479,18 @@ function Photo() {
         </div>
       )}
 
-      <div className="photo-counter-top-right">
-        {getCurrentPhotoDisplay()}
-        {isAllDone && pendingCount > 0 && (
-           <div className="spinner-border text-light spinner-border-sm ms-2" role="status"></div>
-        )}
-      </div>
+      <div className="photo-counter-top-right">{getCurrentPhotoDisplay()}</div>
 
       {photos.length > 0 && (
         <div className="captured-photos-column" ref={photosContainerRef}>
           <div className="captured-photos-title">Ảnh đã chụp ({photos.length}/{maxPhotos})</div>
           {photos.map((photo, index) => (
-            <div key={index} className="position-relative captured-photo-item" style={{width: '100%', height: 'auto', marginBottom: '10px'}}>
-              <img
-                src={photo}
-                alt={`Ảnh ${index + 1}`}
-                style={{width: '100%', borderRadius: '8px', display: 'block'}}
-              />
-              {/* Overlay loading nếu ảnh đang được xử lý */}
-              {processingStatus[index] === 'processing' && (
-                <div style={{
-                    position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', 
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px'
-                }}>
-                    <div className="spinner-border text-light spinner-border-sm"></div>
-                </div>
-              )}
-            </div>
+            <img
+              key={index}
+              src={photo}
+              alt={`Ảnh ${index + 1}`}
+              className="captured-photo-item"
+            />
           ))}
         </div>
       )}

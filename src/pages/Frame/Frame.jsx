@@ -399,27 +399,41 @@ function Frame() {
 
     return finalCanvas;
   };
-  // ===========================================================================
-  // 3. GENERATE VÀ RENDER (GIỮ NGUYÊN LOGIC GỌI HÀM)
-  // ===========================================================================
-  const generateFinalImage = async () => {
+
+// ===========================================================================
+// 3. GENERATE VÀ RENDER (ĐÃ TỐI ƯU ĐỘ PHÂN GIẢI CAO 600 DPI)
+// ===========================================================================
+const generateFinalImage = async () => {
     if (!currentPreviewFrameId || framesList.length === 0) return null;
     const frameObj = framesList.find(f => f.id === currentPreviewFrameId);
     if (!frameObj || !frameObj.frame) return null;
 
-    let w = 1200; 
-    let h = 1800;
-    if (cut === "3") { w = 1800; h = 600; }
-    else if (cut === "41") { w = 600; h = 1800; }
+    // TỐI ƯU: Tăng gấp đôi độ phân giải so với code cũ
+    // Code cũ: 1200x1800 (300 DPI) -> Mới: 2400x3600 (600 DPI)
+    // Máy in HiTi P525L sẽ in đẹp hơn khi nguồn vào nét hơn.
+    let w = 2400; 
+    let h = 3600;
+
+    // Cut 3 (Strip ngang): Tăng từ 1800x600 lên 3600x1200
+    if (cut === "3") { w = 3600; h = 1200; }
+    // Cut 41 (Strip dọc): Tăng từ 600x1800 lên 1200x3600
+    else if (cut === "41") { w = 1200; h = 3600; }
+    
+    // Lưu ý: Cut 6 và 42 dùng khổ default (w, h) hoặc bạn có thể custom thêm
+    // Ví dụ Cut 6 ngang:
+    if (cut === "6") { w = 2400; h = 3600; } // Giữ tỉ lệ 2:3
 
     try {
       const finalCanvas = await drawCompositeHighRes(w, h, frameObj);
-      return finalCanvas.toDataURL('image/png');
+      // Xuất ra PNG để không bị nén (quan trọng)
+      return finalCanvas.toDataURL('image/png'); 
     } catch (e) {
       console.error("Generate Error:", e);
       return null;
     }
-  };
+};
+
+// ... (code còn lại giữ nguyên)
 
   useEffect(() => {
     let isMounted = true;

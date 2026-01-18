@@ -110,6 +110,7 @@ const handleKeyClick = (key) => {
   }, []);
 
   // === Cập nhật ảnh có QR ===
+// === Cập nhật ảnh có QR (Đã tối ưu PNG) ===
   useEffect(() => {
     if (!finalImage || !previewQr) {
       setFinalImageWithQr(finalImage);
@@ -130,8 +131,9 @@ const handleKeyClick = (key) => {
           const qrImg = new Image();
           qrImg.crossOrigin = 'anonymous';
           qrImg.onload = () => {
-            const qrSize = Math.min(canvas.width * 0.2, 150); // Increased size from 15% to 20% and max size from 100px to 150px
-            const margin = 10;
+            // Tăng kích thước QR để sắc nét hơn trên khổ ảnh lớn
+            const qrSize = Math.min(canvas.width * 0.2, 300); 
+            const margin = 20;
             const qrY = canvas.height - qrSize - margin;
 
             const now = new Date();
@@ -140,6 +142,7 @@ const handleKeyClick = (key) => {
             const year = String(now.getFullYear()).slice(-2);
             const dateStr = `${day}-${month}-${year}`;
 
+            // Vẽ nền trắng cho QR và Ngày tháng
             ctx.font = `bold ${qrSize * 0.15}px Arial`;
             const textWidth = ctx.measureText(dateStr).width;
             const spacing = 15;
@@ -148,14 +151,20 @@ const handleKeyClick = (key) => {
             const padding = 10;
             const backgroundHeight = qrSize + padding * 2;
 
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'; // Nền trắng rõ hơn chút
             ctx.fillRect(startX - padding, qrY - padding, totalWidth + padding * 2, backgroundHeight);
+            
+            // Vẽ chữ
             ctx.fillStyle = '#000';
             ctx.textAlign = 'left';
             ctx.textBaseline = 'middle';
             ctx.fillText(dateStr, startX, qrY + qrSize / 2);
+            
+            // Vẽ QR
             ctx.drawImage(qrImg, startX + textWidth + spacing, qrY, qrSize, qrSize);
-            setFinalImageWithQr(canvas.toDataURL('image/jpeg'));
+            
+            // [QUAN TRỌNG] Xuất ra PNG để giữ nguyên chất lượng
+            setFinalImageWithQr(canvas.toDataURL('image/png')); 
           };
           qrImg.src = previewQr;
         } else {
@@ -321,6 +330,7 @@ const sendOriginalImagesEmail = async (email, images, gifData = null) => {
   };
 
   // === Xử lý khi nhấn "TIẾP TỤC" ===
+// === Xử lý khi nhấn "TIẾP TỤC" (Đã tối ưu PNG) ===
   const handleContinue = async () => {
     if (isContinuing) return;
     setIsContinuing(true);
@@ -333,11 +343,13 @@ const sendOriginalImagesEmail = async (email, images, gifData = null) => {
       let id_qr = null;
       let downloadLink = null;
 
+      // Logic tạo QR và link download
       if (!doNotSaveToWeb) {
         id_qr = generateSessionId();
         downloadLink = `${import.meta.env.VITE_API_BASE_URL}/download?id_qr=${id_qr}`;
-        qrDataUrl = await QRCode.toDataURL(downloadLink, { width: 256, margin: 2 });
+        qrDataUrl = await QRCode.toDataURL(downloadLink, { width: 512, margin: 2 }); // Tăng resolution QR gốc
 
+        // Nếu người dùng chọn in QR lên ảnh
         if (showQrOverlay) {
           finalImageToSend = await (new Promise((resolve) => {
             const canvas = document.createElement('canvas');
@@ -352,8 +364,9 @@ const sendOriginalImagesEmail = async (email, images, gifData = null) => {
               const qrImg = new Image();
               qrImg.crossOrigin = 'anonymous';
               qrImg.onload = () => {
-                const qrSize = Math.min(canvas.width * 0.2, 150); // Increased size from 15% to 20% and max size from 100px to 150px
-                const margin = 10;
+                // Tính toán vị trí vẽ (Giống hệt useEffect ở trên)
+                const qrSize = Math.min(canvas.width * 0.2, 300);
+                const margin = 20;
                 const qrY = canvas.height - qrSize - margin;
 
                 const now = new Date();
@@ -370,14 +383,18 @@ const sendOriginalImagesEmail = async (email, images, gifData = null) => {
                 const padding = 10;
                 const backgroundHeight = qrSize + padding * 2;
 
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
                 ctx.fillRect(startX - padding, qrY - padding, totalWidth + padding * 2, backgroundHeight);
+                
                 ctx.fillStyle = '#000';
                 ctx.textAlign = 'left';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(dateStr, startX, qrY + qrSize / 2);
+                
                 ctx.drawImage(qrImg, startX + textWidth + spacing, qrY, qrSize, qrSize);
-                resolve(canvas.toDataURL('image/jpeg'));
+                
+                // [QUAN TRỌNG] Resolve bằng PNG
+                resolve(canvas.toDataURL('image/png'));
               };
               qrImg.src = qrDataUrl;
             };
@@ -386,6 +403,7 @@ const sendOriginalImagesEmail = async (email, images, gifData = null) => {
         }
       }
 
+      // Cập nhật Database
       const idQrToSave = doNotSaveToWeb ? null : id_qr;
       const updateSuccess = await updateIdFrameAndIdQr(id_pay, id_frame, idQrToSave, emailTrimmed || null);
       if (!updateSuccess) {
@@ -393,15 +411,17 @@ const sendOriginalImagesEmail = async (email, images, gifData = null) => {
         return;
       }
 
+      // Chuyển sang trang in (Choose.jsx)
       navigate('/choose', {
         state: {
-          compositeImage: finalImageToSend,
+          compositeImage: finalImageToSend, // Đây giờ là PNG chất lượng cao
           qrImage: qrDataUrl,
           size,
           cut,
         },
       });
 
+      // Xử lý gửi mail và upload
       if (doNotSaveToWeb) {
         if (emailTrimmed) {
           sendOriginalImagesEmail(emailTrimmed, [finalImage, ...photos], gifBase64);

@@ -7,6 +7,7 @@ const Choose = () => {
   const location = useLocation();
   const navigate = useNavigate();
   
+  // Nhận dữ liệu từ qr.jsx
   const { compositeImage, qrImage, size, cut } = location.state || {};
   
   const [countdown, setCountdown] = useState(50);
@@ -46,7 +47,7 @@ const Choose = () => {
     }
   }, [countdown, autoTriggered]);
 
-  // === LOGIC IN ẢNH (ĐÃ SỬA SỐ LƯỢNG CHO KHUNG CẮT ĐÔI) ===
+  // === LOGIC IN ẢNH (ĐÃ SỬA KẾT NỐI SERVER) ===
   useEffect(() => {
     if (printTriggeredRef.current) return;
     if (!compositeImage || !size || cut == null) {
@@ -56,52 +57,33 @@ const Choose = () => {
 
     printTriggeredRef.current = true;
 
-    // 1. Tên máy in
-    const printer = 'Canon SELPHY CP1300';
-    
-    // 2. Định hướng giấy
+    const printer = 'HiTi P525L';
     const orientation = [3].includes(parseInt(cut)) ? 'Landscape' : 'Portrait';
-    
-    // 3. Xác định chế độ cắt (Split Mode)
-    const isSplitMode = [3, 41].includes(parseInt(cut));
-
-    // 4. TÍNH TOÁN SỐ LƯỢNG TỜ GIẤY CẦN IN (LOGIC MỚI)
-    let copies = size;
-    
-    if (isSplitMode) {
-        copies = Math.ceil(size / 2);
-        console.log(`[Logic in] Chế độ Split: Khách chọn ${size} dải -> In thực tế ${copies} tờ Postcard.`);
-    } else {
-        copies = size;
-        console.log(`[Logic in] Chế độ Thường: Khách chọn ${size} ảnh -> In thực tế ${copies} tờ Postcard.`);
-    }
-
-    // 5. Khổ giấy Canon
-    const paper = 'Postcard';
+    const copies = size;
+    const paper = [3, 41].includes(parseInt(cut)) ? '6x4-Split (6x2 2 prints)' : '6x4/152×100mm';
 
     setPrintStatus('Đang chuẩn bị in...');
 
     try {
+      // --- THAY ĐỔI Ở ĐÂY ---
+      // 1. Lấy URL gốc từ biến môi trường (Ví dụ: https://ngrok-url... hoặc http://localhost:5000)
       const API_URL = import.meta.env.VITE_AI_API_URL || 'http://localhost:5000';
+      
+      // 2. Chuyển đổi sang giao thức WebSocket (http -> ws, https -> wss)
+      // Nếu chạy qua Ngrok (https) nó sẽ tự thành wss (bảo mật)
       const WS_URL = API_URL.replace(/^http/, 'ws');
       
       console.log(`[PRINTER] Connecting to WebSocket: ${WS_URL}`);
       const ws = new WebSocket(WS_URL);
+      // ----------------------
 
       ws.onopen = () => {
         console.log('✅ Kết nối WebSocket máy in thành công');
         ws.send(JSON.stringify({
           type: 'print-request',
-          data: { 
-            image: compositeImage, 
-            printer, 
-            orientation, 
-            copies, // Số lượng tờ giấy thực tế cần in
-            paper,
-            isSplitMode 
-          }
+          data: { image: compositeImage, printer, orientation, copies, paper }
         }));
-        setPrintStatus(`Đang in ${copies} tờ...`);
+        setPrintStatus('Đã gửi yêu cầu in');
       };
 
       ws.onmessage = (event) => {
@@ -119,9 +101,10 @@ const Choose = () => {
 
       ws.onerror = (error) => {
         console.error('❌ Lỗi WebSocket:', error);
-        setPrintStatus('Lỗi kết nối Server in');
+        setPrintStatus('Lỗi kết nối Server in (Kiểm tra đường truyền)');
       };
       
+      // Cleanup: Đóng kết nối khi component unmount
       return () => {
           if (ws.readyState === 1) ws.close();
       };

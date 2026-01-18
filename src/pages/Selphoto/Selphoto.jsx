@@ -1186,27 +1186,29 @@ const handleContinue = () => {
 
   const renderSlotItem = (slot, index) => {
     let slotWidth, slotHeight;
-    switch (cut) {
-      case '3':
-        slotWidth = '280px';
-        slotHeight = '220px';
-        break;
-      case '41':
-        slotWidth = '240px';
-        slotHeight = '170px';
-        break;
-      case '42':
-        slotWidth = '260px';
-        slotHeight = '320px';
-        break;
-      case '6':
-        slotWidth = '220px';
-        slotHeight = '185px';
-        break;
-      default:
-        slotWidth = '250px';
-        slotHeight = '250px';
-    }
+const scaleFactor = 1.1;
+
+switch (cut) {
+  case '3':
+    slotWidth = `${280 * scaleFactor}px`;
+    slotHeight = `${220 * scaleFactor}px`;
+    break;
+  case '41':
+    slotWidth = `${240 * scaleFactor}px`;
+    slotHeight = `${170 * scaleFactor}px`;
+    break;
+  case '42':
+    slotWidth = `${260 * scaleFactor}px`;
+    slotHeight = `${320 * scaleFactor}px`;
+    break;
+  case '6':
+    slotWidth = `${220 * scaleFactor}px`;
+    slotHeight = `${185 * scaleFactor}px`;
+    break;
+  default:
+    slotWidth = `${250 * scaleFactor}px`;
+    slotHeight = `${250 * scaleFactor}px`;
+}
 
     const slotHeightNum = parseInt(slotHeight);
     const previewBaseHeight = 320;
@@ -1348,13 +1350,13 @@ const handleContinue = () => {
     );
   };
 
-  const renderSlots = () => {
+const renderSlots = () => {
     switch (cut) {
       case '3':
         return (
           <div style={{
             display: 'flex', flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
-            gap: '15px', width: '100%', height: '100%', padding: '20px', position: 'relative'
+            width: '100%', height: '100%', padding: '20px', position: 'relative'
           }}>
             {selectedSlots.map((slot, index) => renderSlotItem(slot, index))}
           </div>
@@ -1363,7 +1365,7 @@ const handleContinue = () => {
         return (
           <div style={{
             display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
-            gap: '12px', width: '100%', height: '100%', padding: '20px', position: 'relative'
+            width: '100%', height: '100%', padding: '20px', position: 'relative'
           }}>
             {selectedSlots.map((slot, index) => renderSlotItem(slot, index))}
           </div>
@@ -1372,12 +1374,12 @@ const handleContinue = () => {
         return (
           <div style={{
             display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
-            gap: '15px', width: '100%', height: '100%', padding: '20px', position: 'relative'
+            width: '100%', height: '100%', padding: '20px', position: 'relative'
           }}>
-            <div style={{ display: 'flex', gap: '15px' }}>
+            <div style={{ display: 'flex', gap: '3px' }}> {/* Đã giảm gap hàng ngang */}
               {selectedSlots.slice(0, 2).map((slot, index) => renderSlotItem(slot, index))}
             </div>
-            <div style={{ display: 'flex', gap: '15px' }}>
+            <div style={{ display: 'flex', gap: '3px' }}> {/* Đã giảm gap hàng ngang */}
               {selectedSlots.slice(2, 4).map((slot, index) => renderSlotItem(slot, index + 2))}
             </div>
           </div>
@@ -1386,15 +1388,15 @@ const handleContinue = () => {
         return (
           <div style={{
             display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
-            gap: '12px', width: '100%', height: '100%', padding: '20px', position: 'relative'
+            width: '100%', height: '100%', padding: '20px', position: 'relative'
           }}>
-            <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ display: 'flex', gap: '3px' }}>
               {selectedSlots.slice(0, 2).map((slot, index) => renderSlotItem(slot, index))}
             </div>
-            <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ display: 'flex', gap: '3px' }}>
               {selectedSlots.slice(2, 4).map((slot, index) => renderSlotItem(slot, index + 2))}
             </div>
-            <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ display: 'flex', gap: '3px' }}>
               {selectedSlots.slice(4, 6).map((slot, index) => renderSlotItem(slot, index + 4))}
             </div>
           </div>
@@ -1402,7 +1404,7 @@ const handleContinue = () => {
       default:
         return (
           <div style={{
-            display: 'flex', flexWrap: 'wrap', gap: '15px', justifyContent: 'center',
+            display: 'flex', flexWrap: 'wrap', justifyContent: 'center',
             alignItems: 'flex-start', height: '100%', padding: '20px', overflowY: 'auto', position: 'relative'
           }}>
             {selectedSlots.map((slot, index) => renderSlotItem(slot, index))}
@@ -1410,6 +1412,8 @@ const handleContinue = () => {
         );
     }
   };
+
+
   const hasEnhancedImage = originalImages[selectedImageIndex] &&
     selectedSlots[selectedImageIndex]?.photo !== originalImages[selectedImageIndex];
   return (
